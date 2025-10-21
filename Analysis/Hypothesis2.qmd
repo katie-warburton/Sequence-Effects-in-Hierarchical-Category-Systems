@@ -1,0 +1,151 @@
+---
+title: "Hypothesis 2"
+author: "Katie Warburton"
+format: html
+editor: visual
+---
+
+### Imports
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+library(stringr) 
+library(tidyverse) 
+library(dplyr) 
+library(lme4) 
+library(ggplot2) 
+library(lmtest) 
+library(brms) 
+library(tidybayes) 
+library(parameters) 
+
+set.seed(13)
+```
+
+### Data
+
+```{r}
+df <- read.csv('Results/hyp2_df_long.csv',  na.strings=c("","NA"))  
+
+# items <- sprintf("OTH_%d", 1:8)
+# 
+# df_long <- df %>%
+#   pivot_longer(all_of(items), names_to = NULL, values_to = 'SAME' )
+
+mean(df$SAME)
+```
+
+### Hypothesis
+
+Because items are encountered in roughly sequential order (w.r.t. their order in 1D space), items are more likely to be assigned to the same category as the initial item in that sequence (e.g. if a participant assigns the first item to a new category, X, then the likelihood of all subsequent items being assigned to X increases).
+
+### Frequentist
+
+The hypothesis is supported if M1 has an intercept \> 0 and a LRT favours M1 over M0 (p \< .05). 
+
+```{r}
+m1 <- glmer(SAME ~ 1  + (1|P_ID) + (1|STIMULI),
+            family = binomial,
+            data = df)
+
+m1.1 <- glmer(SAME ~ 1  + POOL + (1|P_ID) + (1|STIMULI),
+            family = binomial,
+            data = df)
+
+m1.2 <- glmer(SAME ~ 1  + POOL + (1|P_ID) + (1|STIMULI) + (1|FIRST_IT),
+            family = binomial,
+            data = df)
+
+m0 <- glmer(SAME ~ 0 + (1|P_ID) + (1|STIMULI) + (1|FIRST_IT),
+            family = binomial,
+            data = df)
+```
+
+```{r}
+lrtest(m1, m1.1)
+```
+
+```{r}
+lrtest(m1, m1.2)
+```
+
+```{r}
+lrt <- lrtest(m0, m1.2)
+lrt
+
+intercept <- coef(summary(m1))[1]
+p_val <- lrt[["Pr(>Chisq)"]][2]
+
+if (intercept > 0 & p_val < 0.05){
+  hyp_freq <- "supported"
+} else {
+  hyp_freq <- "unsupported"
+}
+
+prob <- exp(intercept) / (1 + exp(intercept))
+
+print(intercept)
+print(prob)
+```
+
+The hypothesis is `r hyp_freq`.
+
+```{r}
+summary(m1)
+```
+
+```{r}
+m2 <- glmer(SAME ~ 1  + DEPTH + 
+              (1|P_ID) + (1|STIMULI),
+            family = binomial,
+            data = df_long)
+
+m3 <- glmer(SAME ~ 1 + FIRST + 
+              (1|P_ID) + (1|STIMULI),
+            family = binomial,
+            data = df_long)
+
+lrtest(m1, m2)
+lrtest(m1, m3)
+```
+
+Neither depth nor the category of the first item significantly improve the ability of the model to predict same or not same.
+
+### Bayesian
+
+Hypothesis is supported if the 95% credible interval for the intercept excludes 0 and has a positive mean
+
+```{r}
+bb <- brm(SAME ~ 1 + (1|P_ID) + (1|STIMULI),
+          family = bernoulli(),
+          iter = 4000, 
+          cores = 4,
+          control = list(adapt_delta = 0.95),
+          data = df_long,
+          seed = 13)
+          
+fixef(bb)
+```
+
+```{r}
+fit_summary <- summary(bb)
+fit_summary
+```
+
+```{r}
+pp_check(bb)
+plot(bb)
+```
+
+```{r}
+effects <- fixef(bb)
+intercept <- effects['Intercept', 'Estimate']
+lb <- effects['Intercept', 'Q2.5']
+
+if (intercept > 0 & lb > 0){
+  hyp_bayes <- 'supported'
+} else {
+  hyp_bayes <- 'unsupported'
+}
+```
+
+The hypothesis is `r hyp_bayes`.
