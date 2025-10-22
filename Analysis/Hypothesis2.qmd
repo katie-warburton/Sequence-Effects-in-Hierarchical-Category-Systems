@@ -25,13 +25,6 @@ set.seed(13)
 
 ```{r}
 df <- read.csv('Results/hyp2_df_long.csv',  na.strings=c("","NA"))  
-
-# items <- sprintf("OTH_%d", 1:8)
-# 
-# df_long <- df %>%
-#   pivot_longer(all_of(items), names_to = NULL, values_to = 'SAME' )
-
-mean(df$SAME)
 ```
 
 ### Hypothesis
@@ -51,101 +44,64 @@ m1.1 <- glmer(SAME ~ 1  + POOL + (1|P_ID) + (1|STIMULI),
             family = binomial,
             data = df)
 
-m1.2 <- glmer(SAME ~ 1  + POOL + (1|P_ID) + (1|STIMULI) + (1|FIRST_IT),
+m1.2 <- glmer(SAME ~ 1 + (1|POOL/P_ID) + (1|STIMULI),
             family = binomial,
             data = df)
 
-m0 <- glmer(SAME ~ 0 + (1|P_ID) + (1|STIMULI) + (1|FIRST_IT),
-            family = binomial,
-            data = df)
-```
-
-```{r}
 lrtest(m1, m1.1)
-```
-
-```{r}
 lrtest(m1, m1.2)
 ```
 
 ```{r}
-lrt <- lrtest(m0, m1.2)
-lrt
+m0 <- glmer(SAME ~ 0 + (1|P_ID) + (1|STIMULI),
+            family = binomial,
+            data = df)
+
+lrtest(m0, m1)
+fixef(m1)
 
 intercept <- coef(summary(m1))[1]
-p_val <- lrt[["Pr(>Chisq)"]][2]
-
-if (intercept > 0 & p_val < 0.05){
-  hyp_freq <- "supported"
-} else {
-  hyp_freq <- "unsupported"
-}
-
 prob <- exp(intercept) / (1 + exp(intercept))
 
-print(intercept)
 print(prob)
 ```
 
-The hypothesis is `r hyp_freq`.
+### Exploratory: 
 
-```{r}
-summary(m1)
-```
+Do any factors predict likelihood of being the same?
 
 ```{r}
 m2 <- glmer(SAME ~ 1  + DEPTH + 
               (1|P_ID) + (1|STIMULI),
             family = binomial,
-            data = df_long)
+            data = df)
+lrtest(m1, m2)
+
 
 m3 <- glmer(SAME ~ 1 + FIRST + 
               (1|P_ID) + (1|STIMULI),
             family = binomial,
-            data = df_long)
-
-lrtest(m1, m2)
+            data = df)
 lrtest(m1, m3)
+
+m4 <- glmer(SAME ~ 1 + LOC + 
+              (1|P_ID) + (1|STIMULI),
+            family = binomial,
+            data = df)
+
+lrtest(m1, m4)
+
+
+m5 <- glmer(SAME ~ 1 + ORDER + 
+              (1|P_ID) + (1|STIMULI),
+            family = binomial,
+            data = df)
+
+lrtest(m1, m5)
 ```
 
 Neither depth nor the category of the first item significantly improve the ability of the model to predict same or not same.
 
-### Bayesian
-
-Hypothesis is supported if the 95% credible interval for the intercept excludes 0 and has a positive mean
-
 ```{r}
-bb <- brm(SAME ~ 1 + (1|P_ID) + (1|STIMULI),
-          family = bernoulli(),
-          iter = 4000, 
-          cores = 4,
-          control = list(adapt_delta = 0.95),
-          data = df_long,
-          seed = 13)
-          
-fixef(bb)
+summary(m5)
 ```
-
-```{r}
-fit_summary <- summary(bb)
-fit_summary
-```
-
-```{r}
-pp_check(bb)
-plot(bb)
-```
-
-```{r}
-effects <- fixef(bb)
-intercept <- effects['Intercept', 'Estimate']
-lb <- effects['Intercept', 'Q2.5']
-
-if (intercept > 0 & lb > 0){
-  hyp_bayes <- 'supported'
-} else {
-  hyp_bayes <- 'unsupported'
-}
-```
-
-The hypothesis is `r hyp_bayes`.

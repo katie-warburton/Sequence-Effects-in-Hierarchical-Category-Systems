@@ -43,69 +43,21 @@ m1 <- glmer(HAS_X ~ 1 + DEPTH + (1|P_ID) + (1|STIMULI),
 m1.1 <- glmer(HAS_X ~ 1 + DEPTH + POOL + (1|P_ID) + (1|STIMULI),
             family = binomial,
             data = df)
+lrtest(m1, m1.1)
 
-m1.2 <- glmer(HAS_X ~ 1 + DEPTH  + (1|POOL/P_ID) + (1|STIMULI),
+
+m1.2 <- glmer(HAS_X ~ 1 + DEPTH + (1|POOL/P_ID) + (1|STIMULI),
             family = binomial,
             data = df)
-  
-  
+
+lrtest(m1, m1.2)
+
+```
+
+```{r}
 m0 <- glmer(HAS_X ~ 1 + (1|P_ID)  + (1|STIMULI),
             family = binomial,
             data = df)
-
+lrtest(m0, m1)
+fixef(m1)
 ```
-
-```{r}
-lrt <- lrtest(m1, m1.1)
-lrt
-
-lrt <- lrtest(m1, m1.2)
-lrt
-
-```
-
-```{r}
-summary(m1)
-```
-
-```{r}
-lrt <- lrtest(m0, m1)
-lrt
-
-depth <- coef(summary(m1))[2]
-p_val <- lrt[["Pr(>Chisq)"]][2]
-if (depth > 0 & p_val < 0.05){
-  hyp_freq <- "supported"
-} else {
-  hyp_freq <- "unsupported"
-}
-```
-
-The hypothesis is `r hyp_freq` .
-
-### Bayesian
-
-```{r}
-bb <- brm(HAS_X ~ 1 + DEPTH + (1|P_ID) + (1|STIMULI),
-          family = bernoulli(link = "logit"),
-          iter = 4000,
-          cores = 4,
-          control = list(adapt_delta = 0.95),
-          data = df)
-
-fixef(bb)
-```
-
-```{r}
-effects <- fixef(bb)
-depth <- effects['DEPTH2', 'Estimate']
-lb <- effects['DEPTH2', 'Q2.5']
-
-if (depth > 0 & lb > 0){
-  hyp_bayes <- 'supported'
-} else {
-  hyp_bayes <- 'unsupported'
-}
-```
-
-The hypothesis is `r hyp_bayes`.
