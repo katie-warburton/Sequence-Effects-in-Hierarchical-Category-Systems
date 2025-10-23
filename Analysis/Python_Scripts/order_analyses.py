@@ -60,9 +60,6 @@ def jsd_no_nan(dist1, dist2):
             dist = 0.0
     return dist
 
-
-
-
 def get_jsds(df, loc):
     df_at_loc = df[df['LOC'] == loc]
     dist_a = np.array(df_at_loc[df_at_loc['ORDER'] == 'a'][['PROP_A', 'PROP_X', 'PROP_B']].mean().values)
