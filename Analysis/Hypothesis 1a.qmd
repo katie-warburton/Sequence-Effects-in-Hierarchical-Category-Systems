@@ -59,10 +59,11 @@ df_L <- long_1a[long_1a$LOC == 'L',]
 
 ```{r}
 lm_1.1 <- mblogit(
-   formula = CAT ~ 1 + ORDER + POOL,
-   random = list(~1|STIMULI),
+   formula = CAT ~ 1 + ORDER,
+   random = list(~1|STIMULI, ~1|POOL),
    control = mmclogit.control(inner.optimizer = "BFGS"),
    data = df_L)
+
 
 lm_1 <- mblogit(
    formula = CAT ~ 1 + ORDER,
@@ -99,8 +100,8 @@ cm_1 <- mblogit(
 
 
 cm_1.1 <- mblogit(
-   formula = CAT ~ 1 + ORDER + POOL,
-   random = list( ~1|STIMULI),
+   formula = CAT ~ 1 + ORDER,
+   random = list( ~1|STIMULI, ~1|POOL),
    control = mmclogit.control(inner.optimizer = "BFGS"),
    data = df_C)
 
@@ -117,7 +118,7 @@ cm_0 <- mblogit(
 anova(cm_0, cm_1, test='Chisq')
 ```
 
-### Right 
+### Right
 
 ```{r}
 df_R <- long_1a[long_1a$LOC == 'R',]
@@ -131,8 +132,8 @@ rm_1 <- mblogit(
    data = df_R)
 
 rm_1.1 <- mblogit(
-   formula = CAT ~ 1 + ORDER + POOL,
-   random = list(~1|STIMULI), 
+   formula = CAT ~ 1 + ORDER,
+   random = list(~1|STIMULI, ~1|POOL), 
    control = mmclogit.control(inner.optimizer = "BFGS"),
    data = df_R)
 
@@ -160,10 +161,12 @@ m_1 <- mblogit(
    data = long_1a)
 
 m_1.1 <- mblogit(
-   formula = CAT ~ 1 + ORDER + POOL,
-   random = list( ~1|STIMULI,  ~1|LOC),
+   formula = CAT ~ 1 + ORDER,
+   random = list( ~1|STIMULI,  ~1|LOC, ~1|POOL),
     control = mmclogit.control(inner.optimizer = "BFGS"),
    data = long_1a)
+
+anova(m_1, m_1.1, test='Chisq')
 
 m_1.2 <- mblogit(
    formula = CAT ~ 1 + ORDER,
@@ -171,7 +174,6 @@ m_1.2 <- mblogit(
    control = mmclogit.control(inner.optimizer = "BFGS"),
    data = long_1a)
 
-anova(m_1, m_1.1, test='Chisq')
 anova(m_1.2, m_1, test='Chisq')
 ```
 

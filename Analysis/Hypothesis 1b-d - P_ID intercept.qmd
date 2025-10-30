@@ -52,23 +52,13 @@ df_1bi$IS_A <- as.integer(df_1bi$CAT == 'A')
 ```
 
 ```{r}
-
-
-mbi_1 <- glmer( IS_A ~ 1 + ORDER + (1|STIMULI) ,
-              family = binomial,
-              data = df_1bi)
-
-mbi_1.1 <- glmer( IS_A ~ 1 + ORDER + (1|POOL) + (1|STIMULI),
+mbi_1 <- glmer( IS_A ~ 1 + ORDER + (1|STIMULI) + (1|P_ID) ,
               family = binomial,
               data = df_1bi)
 
 
-lrtest(mbi_1, mbi_1.1)
 
-```
-
-```{r}
-mbi_0 <- glmer(IS_A ~ 1 + (1|STIMULI),
+mbi_0 <- glmer(IS_A ~ 1 + (1|STIMULI) + (1|P_ID),
                    data = df_1bi,
                    family = binomial)
 lrtest(mbi_0, mbi_1)
@@ -84,21 +74,14 @@ df_bii$IS_B <- as.integer(df_bii$CAT == 'B')
 df_bii$ORDER <- relevel(factor(df_bii$ORDER), ref = 'f')
 
 
-mbii_1 <- glmer(IS_B ~ 1 + ORDER + (1|STIMULI),
-              family = binomial,
-              data = df_bii)
-
-mbii_1.1 <- glmer(IS_B ~ 1 + ORDER + (1|POOL) + (1|STIMULI),
+mbii_1 <- glmer(IS_B ~ 1 + ORDER + (1|STIMULI) + (1|P_ID),
               family = binomial,
               data = df_bii)
 
 
 
-lrtest(mbii_1, mbii_1.1)
-```
 
-```{r}
-mbii_0 <- glmer(IS_B ~ 1 + (1|STIMULI),
+mbii_0 <- glmer(IS_B ~ 1 + (1|STIMULI) + (1|P_ID),
                    data = df_bii,
                    family = binomial)
 
@@ -116,27 +99,18 @@ df_biii$ORDER[df_biii$ORDER != 'm'] <- 'not_m'
 df_biii$ORDER <- relevel(factor(df_biii$ORDER), ref = 'not_m')
 
 
-mbiii_1 <- glmer( IS_X ~ 1 + ORDER  + (1|STIMULI),
+mbiii_1 <- glmer( IS_X ~ 1 + ORDER  + (1|STIMULI) + (1|P_ID),
               family = binomial,
               data = df_biii)
 
-mbiii_1.1 <- glmer( IS_X ~ 1 + ORDER  + (1|POOL) + (1|STIMULI),
-              family = binomial,
-              data = df_biii)
-
-
-lrtest(mbiii_1, mbiii_1.1)
-
-```
-
-```{r}
-mbiii_0 <- glmer(IS_X ~ 1 + (1|STIMULI),
+mbiii_0 <- glmer(IS_X ~ 1 + (1|STIMULI) + (1|P_ID),
                    data = df_biii,
                    family = binomial)
 
 lrtest(mbiii_0, mbiii_1)
 fixef(mbiii_1)
 standard_error(mbiii_1)
+
 ```
 
 ## Hypothesis 1c
@@ -148,20 +122,12 @@ df_L <- df[df$LOC == 'L',]
 df_1c <- df_L[df_L$ORDER != 'm',]
 df_1c$IS_A <- as.integer(df_1c$CAT == 'A')
 
-m1c_1 <- glmer(IS_A ~ 1 + ORDER + (1|STIMULI) ,
-              family = binomial,
-              data = df_1c)
-
-m1c_1.1 <- glmer(IS_A ~ 1 + ORDER + (1|STIMULI) + (1|POOL) ,
+m1c_1 <- glmer(IS_A ~ 1 + ORDER + (1|STIMULI) + (1|P_ID),
               family = binomial,
               data = df_1c)
 
 
-lrtest(m1c_1, m1c_1.1)
-```
-
-```{r}
-m1c_0 <- glmer(IS_A ~ 1 + (1|STIMULI),
+m1c_0 <- glmer(IS_A ~ 1 + (1|STIMULI) + (1|P_ID),
                    data = df_1c,
                    family = binomial)
 
@@ -180,35 +146,15 @@ df_1d <- df_R[df_R$ORDER != 'm',]
 df_1d$IS_B <- as.integer(df_1d$CAT == 'B')
 df_1d$ORDER <- relevel(factor(df_1d$ORDER), ref='f')
 
-m1d_1 <- glmer(IS_B ~ 1 + ORDER + (1|STIMULI) ,
+m1d_1 <- glmer(IS_B ~ 1 + ORDER + (1|STIMULI) + (1|P_ID),
               family = binomial,
               data = df_1d)
 
-m1d_1.1 <- glmer(IS_B ~ 1 + ORDER + (1|STIMULI) + (1|POOL) ,
-              family = binomial,
-              data = df_1d)
-
-lrtest(m1d_1, m1d_1.1)
-
-```
-
-```{r}
-m1d_0 <- glmer(IS_B ~ 1 + (1|STIMULI),
+m1d_0 <- glmer(IS_B ~ 1 + (1|STIMULI) + (1|P_ID),
                    data = df_1d,
                    family = binomial)
 
 lrtest(m1d_0, m1d_1)
 fixef(m1d_1)
 standard_error(m1d_1)
-```
-
-```{r}
-
-m1d_0 <- glmer(IS_B ~ 1 + (1|STIMULI) + (1|POOL),
-                   data = df_1d,
-                   family = binomial)
-
-lrtest(m1d_0, m1d_1.1)
-fixef(m1d_1.1)
-standard_error(m1d_1.1)
 ```

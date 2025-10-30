@@ -95,25 +95,50 @@ def generate_summary_AXB_plot(df, column, colVals, names, figsize=(6.25, 2.15), 
     for i in range(numAx):
             ax = axes[i]
             x = ['A', 'X', 'B']
-            if overall and i == numAx-1:
+            if overall and i == 0:
                 y = avg
                 yerr = overall_err
-                ax.text(-0.45, 0.92, f'T = {df.shape[0]}', size=8)
-                ax.set_title('Overall', fontsize=12)
+                ax.text(-0.42, 0.89, f'T = {df.shape[0]}', size=8)
+                ax.set_title('Overall', fontsize=9.5)
+            elif overall:
+                val = colVals[i-1]
+                y = stim_df[stim_df[column] == val][['PROP_A', 'PROP_X', 'PROP_B']].values[0]
+                yerr = sem[sem[column] == val][['PROP_A', 'PROP_X', 'PROP_B']].values[0]
+                ax.text(-0.42, 0.89, f"T = {counts[counts[column] == val]['PROP_A'].iloc[0]}", size=8)
+                ax.set_title(f'{names[i-1]}', fontsize=9.5)
             else:
                 val = colVals[i]
                 y = stim_df[stim_df[column] == val][['PROP_A', 'PROP_X', 'PROP_B']].values[0]
                 yerr = sem[sem[column] == val][['PROP_A', 'PROP_X', 'PROP_B']].values[0]
-                ax.text(-0.45, 0.92, f"T = {counts[counts[column] == val]['PROP_A'].iloc[0]}", size=8)
-                ax.set_title(f'{names[i]}', fontsize=12)
+                ax.text(-0.42, 0.89, f"T = {counts[counts[column] == val]['PROP_A'].iloc[0]}", size=8)
+                ax.set_title(f'{names[i]}', fontsize=9.5)
             ax.bar(x, y, color=['#D81B60', '#1E88E5', '#FFC107'], edgecolor='black', width=0.75, linewidth=0.5)#, yerr=yerr, capsize=3)
-            ax.set_xticks(['A', 'X', 'B'])
+            # ax.set_xticks(['A', 'X', 'B'])
+            ax.set_xticks([])
+            ax.tick_params(axis='both', which='major', labelsize=8)
             if i == 0:
                 ax.set_yticks([0.0, 0.5, 1.0])
-                ax.set_ylabel('Mean % of items', fontsize=10)
+                ax.set_ylabel('Mean % of items', fontsize=9)
             else:
                 ax.set_yticks([])
             ax.set_ylim(0, 1)
+
+            handles = [
+                plt.Rectangle((0,0),0.5,0.5, facecolor='#D81B60', edgecolor='black', linewidth=0.5),
+                plt.Rectangle((0,0),0.5,0.5, facecolor='#1E88E5', edgecolor='black', linewidth=0.5),
+                plt.Rectangle((0,0),0.5,0.5, facecolor='#FFC107', edgecolor='black', linewidth=0.5),
+            ]
+            labels = ['A', 'X', 'B']
+            fig.legend(
+                handles,
+                labels,
+                loc='lower right',
+                bbox_transform=fig.transFigure,
+                bbox_to_anchor=(1.02, -0.15),
+                ncol=3,
+                frameon=False,
+                fontsize=8
+            )
     fig.savefig(f'{fname}.jpg', dpi=300, bbox_inches='tight')
 
 
