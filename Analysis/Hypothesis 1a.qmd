@@ -14,7 +14,6 @@ execute:
 library(stringr) 
 library(tidyverse) 
 library(dplyr) 
-library(nnet)
 library(ggplot2) 
 library(lmtest) 
 library(brms) 
@@ -39,15 +38,16 @@ Order affects the assignment of items to categories A, B, X
 
 ```{r}
 df_1a <- df[df$ORDER != 'a',]
-
-table(df_1a$LOC)
-
-long_1a <- df_1a %>% pivot_longer(cols=items, 
+long_1a <- df_1a %>% pivot_longer(cols=all_of(items), 
                                   values_to = 'CAT') %>% 
   drop_na() %>% 
   select(all_of(c('P_ID', 'DEPTH', 'LOC', 'ORDER', 'CAT', 'STIMULI', 'POOL')))
 
-long_1a$CAT <- as.factor(long_1a$CAT)
+long_1a$CAT <- relevel(as.factor(long_1a$CAT), ref='X')
+long_1a$ORDER <- relevel(as.factor(long_1a$ORDER), ref='m')
+
+
+                
 
 ```
 
@@ -55,100 +55,111 @@ long_1a$CAT <- as.factor(long_1a$CAT)
 
 ```{r}
 df_L <- long_1a[long_1a$LOC == 'L',]
-```
-
-```{r}
-lm_1.1 <- mblogit(
-   formula = CAT ~ 1 + ORDER,
-   random = list(~1|STIMULI, ~1|POOL),
-   control = mmclogit.control(inner.optimizer = "BFGS"),
-   data = df_L)
-
 
 lm_1 <- mblogit(
    formula = CAT ~ 1 + ORDER,
-   random = list(~1|STIMULI),
-   control = mmclogit.control(inner.optimizer = "BFGS"),
+   random = list(~1|STIMULI, ~1|P_ID),
+    control = mmclogit.control(inner.optimizer = 'CG' ),
    data = df_L)
 
-anova(lm_1, lm_1.1, test = 'Chisq')
-```
-
-```{r}
 lm_0 <- mblogit(
    formula = CAT ~ 1,
-   random = list( ~1|STIMULI),
-    control = mmclogit.control(inner.optimizer = "BFGS"),
+   random = list( ~1|STIMULI, ~1|P_ID),
+    control = mmclogit.control(inner.optimizer = 'CG' ),
    data = df_L)
 
 l_anova <- anova(lm_0, lm_1, test='Chisq')
 l_anova
 ```
 
+```{r}
+coef <- round(coef(lm_1), 2)
+ci <- round(confint(lm_1), 2)
+
+sprintf('%s & [%s, %s]', coef[["A~(Intercept)"]], ci[1,1], ci[1, 2])
+
+sprintf('%s & [%s, %s]', coef[["A~ORDERf"]], ci[5,1], ci[5, 2])
+sprintf('%s & [%s, %s]', coef[["A~ORDERb"]], ci[3,1], ci[3, 2])
+
+
+sprintf('%s & [%s, %s]', coef[["B~(Intercept)"]], ci[2,1], ci[2, 2])
+
+sprintf('%s & [%s, %s]', coef[["B~ORDERf"]], ci[6,1], ci[6, 2])
+sprintf('%s & [%s, %s]', coef[["B~ORDERb"]], ci[4,1], ci[4, 2])
+```
+
 ### Centered
 
 ```{r}
 df_C <- long_1a[long_1a$LOC == 'C',]
-```
 
-```{r}
 cm_1 <- mblogit(
    formula = CAT ~ 1 + ORDER,
-   random = list(~1|STIMULI),
-   control = mmclogit.control(inner.optimizer = "BFGS"),
+   random = list(~1|STIMULI, ~1|P_ID),
+   control = mmclogit.control(inner.optimizer = 'CG' ),
    data = df_C)
 
-
-cm_1.1 <- mblogit(
-   formula = CAT ~ 1 + ORDER,
-   random = list( ~1|STIMULI, ~1|POOL),
-   control = mmclogit.control(inner.optimizer = "BFGS"),
+cm_0 <- mblogit(
+   formula = CAT ~ 1,
+   random = list(~1|STIMULI, ~1|P_ID),
+   control = mmclogit.control(inner.optimizer = 'CG' ),
    data = df_C)
 
-anova(cm_1, cm_1.1, test = "Chisq")
+c_anova <- anova(cm_0, cm_1, test='Chisq')
+c_anova
 ```
 
 ```{r}
-cm_0 <- mblogit(
-   formula = CAT ~ 1,
-   random = list(~1|STIMULI),
-   control = mmclogit.control(inner.optimizer = "BFGS"),
-   data = df_C)
+coef <- round(coef(cm_1), 2)
+ci <- round(confint(cm_1), 2)
 
-anova(cm_0, cm_1, test='Chisq')
+sprintf('%s & [%s, %s]', coef[["A~(Intercept)"]], ci[1,1], ci[1, 2])
+
+sprintf('%s & [%s, %s]', coef[["A~ORDERf"]], ci[5,1], ci[5, 2])
+sprintf('%s & [%s, %s]', coef[["A~ORDERb"]], ci[3,1], ci[3, 2])
+
+
+sprintf('%s & [%s, %s]', coef[["B~(Intercept)"]], ci[2,1], ci[2, 2])
+
+sprintf('%s & [%s, %s]', coef[["B~ORDERf"]], ci[6,1], ci[6, 2])
+sprintf('%s & [%s, %s]', coef[["B~ORDERb"]], ci[4,1], ci[4, 2])
 ```
 
 ### Right
 
 ```{r}
 df_R <- long_1a[long_1a$LOC == 'R',]
-```
 
-```{r}
 rm_1 <- mblogit(
    formula = CAT ~ 1 + ORDER,
-   random = list(~1|STIMULI), 
-   control = mmclogit.control(inner.optimizer = "BFGS"),
+   random = list(~1|STIMULI, ~1|P_ID),
+   control = mmclogit.control(inner.optimizer = "CG"),
    data = df_R)
-
-rm_1.1 <- mblogit(
-   formula = CAT ~ 1 + ORDER,
-   random = list(~1|STIMULI, ~1|POOL), 
-   control = mmclogit.control(inner.optimizer = "BFGS"),
-   data = df_R)
-
-anova(rm_1, rm_1.1, test = "Chisq")
-```
-
-```{r}
 
 rm_0 <- mblogit(
    formula = CAT ~ 1,
-   random = list( ~1|STIMULI),
-    control = mmclogit.control(inner.optimizer = "BFGS"),
+   random = list(~1|STIMULI, ~1|P_ID),
+    control = mmclogit.control(inner.optimizer = "CG"),
    data = df_R)
 
-anova(rm_0, rm_1, test = "Chisq")
+r_anova <- anova(rm_0, rm_1, test = "Chisq")
+r_anova
+```
+
+```{r}
+coef <- round(coef(rm_1), 2)
+ci <- round(confint(m_1), 2)
+
+sprintf('%s & [%s, %s]', coef[["A~(Intercept)"]], ci[1,1], ci[1, 2])
+
+sprintf('%s & [%s, %s]', coef[["A~ORDERf"]], ci[5,1], ci[5, 2])
+sprintf('%s & [%s, %s]', coef[["A~ORDERb"]], ci[3,1], ci[3, 2])
+
+
+sprintf('%s & [%s, %s]', coef[["B~(Intercept)"]], ci[2,1], ci[2, 2])
+
+sprintf('%s & [%s, %s]', coef[["B~ORDERf"]], ci[6,1], ci[6, 2])
+sprintf('%s & [%s, %s]', coef[["B~ORDERb"]], ci[4,1], ci[4, 2])
 ```
 
 ### Overall
@@ -156,33 +167,33 @@ anova(rm_0, rm_1, test = "Chisq")
 ```{r}
 m_1 <- mblogit(
    formula = CAT ~ 1 + ORDER,
-   random = list(~1|STIMULI, ~1|LOC), 
-   control = mmclogit.control(inner.optimizer = "BFGS"),
+   random = list(~1|STIMULI, ~1|P_ID, ~1|LOC), 
+   control = mmclogit.control(inner.optimizer = "CG"),
    data = long_1a)
 
-m_1.1 <- mblogit(
-   formula = CAT ~ 1 + ORDER,
-   random = list( ~1|STIMULI,  ~1|LOC, ~1|POOL),
-    control = mmclogit.control(inner.optimizer = "BFGS"),
+m_0 <- mblogit(
+   formula = CAT ~ 1,
+   random = list(~1|STIMULI, ~1|P_ID, ~1|LOC), 
+   control = mmclogit.control(inner.optimizer = "CG"),
    data = long_1a)
 
-anova(m_1, m_1.1, test='Chisq')
-
-m_1.2 <- mblogit(
-   formula = CAT ~ 1 + ORDER,
-   random = list( ~1|STIMULI),
-   control = mmclogit.control(inner.optimizer = "BFGS"),
-   data = long_1a)
-
-anova(m_1.2, m_1, test='Chisq')
+o_anova <- anova(m_0, m_1, test = "Chisq")
+o_anova
 ```
 
 ```{r}
-m_0 <- mblogit(
-   formula = CAT ~ 1,
-   random = list(~1|STIMULI, ~1|LOC), 
-   control = mmclogit.control(inner.optimizer = "BFGS"),
-   data = long_1a)
+coef <- round(coef(m_1), 2)
+ci <- round(confint(m_1), 2)
 
-anova(m_0, m_1, test = "Chisq")
+print('A vs. X')
+sprintf('Intercept: %s & [%s, %s]', coef[["A~(Intercept)"]], ci[1,1], ci[1, 2])
+sprintf('Forward: %s & [%s, %s]', coef[["A~ORDERf"]], ci[5,1], ci[5, 2])
+sprintf('Backward: %s & [%s, %s]', coef[["A~ORDERb"]], ci[3,1], ci[3, 2])
+
+
+print('B vs. X')
+sprintf('Intercept: %s & [%s, %s]', coef[["B~(Intercept)"]], ci[2,1], ci[2, 2])
+
+sprintf('Forward: %s & [%s, %s]', coef[["B~ORDERf"]], ci[6,1], ci[6, 2])
+sprintf('Backward: %s & [%s, %s]', coef[["B~ORDERb"]], ci[4,1], ci[4, 2])
 ```
