@@ -1,0 +1,93 @@
+---
+title: "General Results"
+author: "Katie Warburton"
+format: html
+editor: visual
+---
+
+### Imports
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+library(dplyr) 
+library(tidyverse)
+library(mclogit)
+library("rcompanion")
+
+set.seed(13)
+
+
+```
+
+### Data
+
+```{r}
+df <- read.csv('Results/level2_trial_data.csv',  na.strings=c("","NA"))  
+
+items <- sprintf("I%02d", 9:23)
+
+df_long <- df %>% pivot_longer(cols=all_of(items), 
+                               values_to = 'CAT') %>% 
+  drop_na() %>% 
+  select(all_of(c('P_ID', 'DEPTH', 'LOC', 'ORDER', 'CAT', 'STIMULI', 'POOL')))
+```
+
+Does category assignment differ by participant pool?
+
+```{r}
+cat_by_pool <- table(df_long$POOL, df_long$CAT)
+
+cat_by_pool
+
+round(t(apply(cat_by_pool,1, function(x) x/sum(x))), 3)
+
+t_pool <- chisq.test(cat_by_pool)
+t_pool 
+round(cramerV(cat_by_pool), 2)
+
+chisq.test(cat_by_pool)$stdre
+```
+
+Does category assignment differ by location?
+
+```{r}
+cat_by_loc <- table(df_long$LOC, df_long$CAT)
+
+cat_by_loc
+
+round(t(apply(cat_by_loc,1, function(x) x/sum(x))), 3)
+
+t <- chisq.test(cat_by_loc)
+t
+round(cramerV(cat_by_loc), 2)
+
+chisq.test(cat_by_loc)$stdre
+```
+
+Does category assignment differ by stimuli set
+
+```{r}
+cat_by_set <- table(df_long$STIMULI, df_long$CAT)
+
+cat_by_set
+
+round(t(apply(cat_by_set,1, function(x) x/sum(x))), 3)
+
+t_set <-chisq.test(cat_by_set)
+t_set
+
+round(cramerV(cat_by_set), 2)
+
+chisq.test(cat_by_set)$stdre
+```
+
+```{r}
+order_stim <- table(df_long$ORDER, df_long$STIMULI)
+order_stim
+
+t_stim <- chisq.test(order_stim)
+t_stim
+
+cramerV(order_stim)
+
+t_stim$stdre
+```
