@@ -74,10 +74,9 @@ class CategorySystem:
 # make better labelling to speed things up!!!!!!
 def get_label(node):
     if len(node.children) == 0:
-        return (node.label, tuple(node.item_idxs))
+        return (tuple(node.item_idxs))
     
-    return (node.label, tuple(
-        get_label(child)
+    return (tuple(get_label(child)
         for child in node.children
     ))
 
@@ -129,7 +128,6 @@ def ordered_CKMM(node, D, treeLookup=None):
     return score 
             
 def greedy_categorizer(best_syst, item_seq, D, treeLookup = None):
-    random.seed(13)
     cat_choices = {}
     if treeLookup is None:
         treeLookup = defaultdict(lambda: None)
@@ -165,7 +163,6 @@ def softmax(x, temp):
     return np.exp(x) / np.sum(np.exp(x))
 
 def greedy_categorizer_softmax(best_syst, item_seq, D, treeLookup=None, temp=1):
-    random.seed(13)
     cat_choices = {}
     if treeLookup is None:
         treeLookup = defaultdict(lambda: None)
@@ -226,7 +223,6 @@ def get_closest_dist(best_syst, cat_idx, item, D):
     return np.min(cat_items_idx)
 
 def get_distance_mat(items, min_it=None, max_it=None, noise=0):
-    random.seed(13)
     item_hash = {lab+1: lab for lab in range(len(items))}
     if min_it is None:
         min_it = np.min(items)

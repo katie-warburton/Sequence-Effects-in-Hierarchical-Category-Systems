@@ -40,17 +40,11 @@ m1 <- glmer(HAS_X ~ 1 + DEPTH + (1|P_ID) + (1|STIMULI),
             family = binomial,
             data = df)
 
-m1.1 <- glmer(HAS_X ~ 1 + DEPTH + POOL + (1|P_ID) + (1|STIMULI),
+m1.1 <- glmer(HAS_X ~ 1 + DEPTH + (1|POOL/P_ID) + (1|STIMULI),
             family = binomial,
             data = df)
+
 lrtest(m1, m1.1)
-
-
-m1.2 <- glmer(HAS_X ~ 1 + DEPTH + (1|POOL/P_ID) + (1|STIMULI),
-            family = binomial,
-            data = df)
-
-lrtest(m1, m1.2)
 
 ```
 
@@ -59,5 +53,6 @@ m0 <- glmer(HAS_X ~ 1 + (1|P_ID)  + (1|STIMULI),
             family = binomial,
             data = df)
 lrtest(m0, m1)
-fixef(m1)
+round(fixef(m1), 2)
+round(confint(m1, parm='beta_', method='Wald'), 2)
 ```

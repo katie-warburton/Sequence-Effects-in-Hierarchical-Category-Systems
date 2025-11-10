@@ -40,16 +40,11 @@ m1 <- glmer(SAME ~ 1  + (1|P_ID) + (1|STIMULI),
             family = binomial,
             data = df)
 
-m1.1 <- glmer(SAME ~ 1  + POOL + (1|P_ID) + (1|STIMULI),
-            family = binomial,
-            data = df)
-
-m1.2 <- glmer(SAME ~ 1 + (1|POOL/P_ID) + (1|STIMULI),
+m1.1 <- glmer(SAME ~ 1 + (1|POOL/P_ID) + (1|STIMULI),
             family = binomial,
             data = df)
 
 lrtest(m1, m1.1)
-lrtest(m1, m1.2)
 ```
 
 ```{r}
@@ -58,7 +53,8 @@ m0 <- glmer(SAME ~ 0 + (1|P_ID) + (1|STIMULI),
             data = df)
 
 lrtest(m0, m1)
-fixef(m1)
+round(fixef(m1), 2)
+round(confint(m1, parm='beta_', method='Wald'), 2)
 
 intercept <- coef(summary(m1))[1]
 prob <- exp(intercept) / (1 + exp(intercept))

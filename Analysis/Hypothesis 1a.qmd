@@ -22,7 +22,6 @@ library(parameters)
 library(mclogit) 
 
 set.seed(13)
-
 ```
 
 ### Data
