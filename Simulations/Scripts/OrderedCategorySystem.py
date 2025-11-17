@@ -53,7 +53,6 @@ class CategorySystem:
         if len(json_cat['children']) == 0:
             self.can_add.append(cat)
             for item in json_cat['items']:
-                # cat.add_item(item, self.item_hash[item])
                 cat.item_idxs.append(self.item_hash[item])
                 item_cat = Category(item, cat.depth+1, self)
                 item_cat.item_idxs.append(self.item_hash[item])
@@ -69,9 +68,10 @@ class CategorySystem:
         with open(fp, 'r') as f:
             json_data = json.load(f)
         return self.parse_cats(json_data)
-    
 
-# make better labelling to speed things up!!!!!!
+'''
+CKMM Categorization Model
+'''
 def get_label(node):
     if len(node.children) == 0:
         return (tuple(node.item_idxs))
@@ -158,9 +158,10 @@ def greedy_categorizer(best_syst, item_seq, D, treeLookup = None):
     return best_syst, cat_choices    
 
 def softmax(x, temp):
-    x = x/temp
-    x = x - np.max(x)
-    return np.exp(x) / np.sum(np.exp(x))
+    x = x / temp
+    x = x - np.max(x, axis=-1, keepdims=True)
+    e_x = np.exp(x)
+    return e_x / np.sum(e_x, axis=-1, keepdims=True)
 
 def greedy_categorizer_softmax(best_syst, item_seq, D, treeLookup=None, temp=1):
     cat_choices = {}
@@ -188,40 +189,6 @@ def greedy_categorizer_softmax(best_syst, item_seq, D, treeLookup=None, temp=1):
         cat_choices[item] = cats[best_idx]
     return best_syst, cat_choices
 
-def model_likelihood(syst, category_choices, item_seq, D, treeLookup=None, temp=1):
-    log_like = 0.0
-    if treeLookup is None:
-        treeLookup = defaultdict(lambda: None)
-    for item in item_seq:
-        sys_scores = []
-        potential_systs  = []
-        cats  = []
-        current_syst = syst
-        for i in range(len(current_syst.can_add)):
-            test_syst = copy.deepcopy(current_syst)
-            cat = test_syst.can_add[i]
-            cat.add_item(item, syst.item_hash[item])
-            test_syst.num_items += 1
-            if not cat.visible:
-                cat.visible = True
-                test_syst.num_nodes += 1
-            sys_scores.append(ordered_CKMM(test_syst.root, D, treeLookup))
-            potential_systs.append(test_syst)
-            cats.append(cat.label)
-        prob_dist = softmax(np.array(sys_scores), temp)
-        choice = category_choices[f'I{item:02}']
-        choice_idx = cats.index(choice)
-        log_prob = np.log(prob_dist[choice_idx])
-        log_like += log_prob
-        syst = potential_systs[choice_idx]
-    return log_like
-
-def get_closest_dist(best_syst, cat_idx, item, D):
-    new_idx = best_syst.item_hash[item]
-    prev_cat = best_syst.can_add[cat_idx]
-    cat_items_idx = D[prev_cat.item_idxs, new_idx]
-    return np.min(cat_items_idx)
-
 def get_distance_mat(items, min_it=None, max_it=None, noise=0):
     item_hash = {lab+1: lab for lab in range(len(items))}
     if min_it is None:
@@ -239,3 +206,44 @@ def get_distance_mat(items, min_it=None, max_it=None, noise=0):
         D = D + D_noise
         np.fill_diagonal(D, 0)
     return D, item_hash
+
+def compute_possible_scores(trials, order_dic, item_space):
+    all_data = {t['P_ID']: [] for t in trials}
+    D, item_hash = get_distance_mat(item_space)
+    lookUpTree = defaultdict(lambda: None)
+    for t in trials:
+        d, l, o = t['DEPTH'], t['LOC'], t['ORDER']
+        cat_assigns = t['ITEMS']
+        if d == 2:
+            syst = CategorySystem(item_hash, '..\\..\\Katie2025_AlienTaxonomist\\static_98863bd139ec98cf6bc52549beaaf679\\taxonomies\\tree2D.json')
+        else:
+            syst = CategorySystem(item_hash, '..\\..\\Katie2025_AlienTaxonomist\\static_98863bd139ec98cf6bc52549beaaf679\\taxonomies\\tree3D.json')
+        orders = order_dic[f'{l}{o}']
+        trial_data = []
+        for i_ord in orders:
+            start_syst = copy.deepcopy(syst)
+            order_data = []
+            for item in i_ord:
+                syst_scores = []
+                cats = []
+                potential_systs = []
+                current_syst = start_syst
+                for i in range(len(current_syst.can_add)):
+                    test_syst = copy.deepcopy(current_syst)
+                    cat = test_syst.can_add[i]
+                    cat.add_item(item, current_syst.item_hash[item])
+                    test_syst.num_items += 1
+                    if not cat.visible:
+                        cat.visible = True
+                        test_syst.num_nodes += 1
+                    score = ordered_CKMM(test_syst.root, D, lookUpTree)
+                    syst_scores.append(score)
+                    cats.append(cat.label)
+                    potential_systs.append(test_syst)
+                cat_choice = cat_assigns[f'I{item:02}']
+                choice_idx = cats.index(cat_choice)
+                order_data.append((np.array(syst_scores), choice_idx))
+                start_syst = potential_systs[choice_idx]  
+            trial_data.append(order_data)
+        all_data[t['P_ID']].append(trial_data)
+    return all_data, D, lookUpTree
