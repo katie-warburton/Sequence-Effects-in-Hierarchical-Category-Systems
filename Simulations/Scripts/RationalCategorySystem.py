@@ -1,29 +1,20 @@
-
-'''
-'''
-import string
 import numpy as np
 from scipy.special import logsumexp
-import scipy.stats.distributions as dist
+from scipy.stats import t
 from collections import defaultdict
-import numpy.random as nprand
-import random
-import os
-
 
 VERBOSE = False 
 
-def get_tdist(df, mu, sigma, x):
-    tdist = dist.t([df])
-    return tdist.pdf((x-mu)/sigma)
-
-def stims_equal(stim1, stim2):
-    return all([s[0]==s[1] for s in zip(stim1, stim2)])
+def get_tdist(x, a, mu, sigmasq, lambd):
+    scale = np.sqrt(sigmasq * (1.0 + (1.0/lambd)))
+    return t.logpdf(x, df=a, loc=mu, scale=scale)
 class RationalModel:
     '''
     Implementation for continuous features only
     updated so can start with an already populated system 
     Adapted from: https://github.com/johnmcdonnell/Rational-Models-of-Categorization/blob/master/particle.py
+    -- modified such that once participants make the maximum number of categories the coupling constraint goes to 1.0
+    and no probability of creating a new category is calculated
     '''
 
     def __init__(self, c, mu_0, sigmasq_0, lambda_0, a_0, partition=None, stimuli=None, max_new_clusters=np.inf):
@@ -54,110 +45,91 @@ class RationalModel:
         self.partition = [self.label_to_cluster[label] for label in partition]
         self.clusters = len(unique_labels)
 
-
-    '''
-    Makes new category labels: A, B, ..., Z, AA, AB, ...
-    '''
-    def make_new_label(self, n):
-        letters = string.ascii_uppercase
-        label = ""
-        while True:
-            n, r = divmod(n, 26)
-            label = letters[r] + label
-            if n == 0:
-                break
-            n -= 1
-        return label
-
-
     def find_distribution(self, k, i, lambda_i, a_i, n):
         """
         For a given cluster computes the current mean and variance.
         """
-        items = []
-        for index in range(len(self.partition)):
-            if self.partition[index] == k:
-                items.append( self.stimuli[index][i] )
-        
+        items = [self.stimuli[idx][i] 
+                 for idx, cl in enumerate(self.partition)
+                 if cl == k]
         if n>0:
             xbar = np.mean(items)
         else:
             xbar = 0
         if n > 1:
-            var = np.var(items)
+            # POPULATION OR SAMPLE (ddof = 1 for sample mean)
+            var = np.var(items, ddof=1)
         else:
             var = 0
         
-        mui = ((self.lambda_0[i]*self.mu_0[i]) + (n * xbar)) / lambda_i # should be divided by lambda_i not a_i
+        mu_i = ((self.lambda_0[i]*self.mu_0[i]) + (n * xbar)) / lambda_i
         if n == 0:
             sigmasq_i=self.sigmasq_0[i]
         else:
-            sigmasq_i = ((self.a_0[i]*self.sigmasq_0[i]) +
-                         ((n-1.0) * var) + ((self.lambda_0[i]*n)/lambda_i) * ((self.mu_0[i] - xbar)**2)) / a_i
-        return mui, sigmasq_i
+            sigmasq_i = ((self.a_0[i]*self.sigmasq_0[i]) + ((n-1.0) * var) +
+                         ((self.lambda_0[i]*n)/lambda_i) * ((self.mu_0[i] - xbar)**2)) / a_i
+        return mu_i, sigmasq_i
 
     def prob_density(self, k, i, x):
         if k == self.clusters:
             n = 0
         else:
             n = sum([item == k for item in self.partition])
-        
         lambda_i = self.lambda_0[i] + n 
         a_i = self.a_0[i] + n
         mu_i, sigmasq_i = self.find_distribution(k, i, lambda_i, a_i, n)
-        prob = get_tdist(a_i, mu_i, np.sqrt(sigmasq_i * (1.0 + (1.0/lambda_i))), x)
+        prob = get_tdist(x, a_i, mu_i, sigmasq_i, lambda_i)
         return prob
 
     def stimulus_prob(self, stim_idx, k):
-        stimulus = self.stimuli[stim_idx]
-        prob_jks = []
-        for i in range(len(stimulus)):
-            prob_jks.append(self.prob_density(k, i, stimulus[i]))
-        return(np.prod(prob_jks))
+        stim = self.stimuli[stim_idx]
+        return sum(self.prob_density(k, i, stim[i]) for i in range(len(stim)))
     
-    def compute_posterior(self, stimulus):
+    def compute_posterior(self, stim_idx):
         if self.clusters < self.max_clusters:
             pk  = np.empty(self.clusters+1)
             pfk = np.empty(self.clusters+1)
         else:
             pk  = np.empty(self.clusters)
             pfk = np.empty(self.clusters)
-
-        for k in range(self.clusters):
-            pk[k] = np.log((self.c * sum([item == k for item in self.partition])) / ((1.0-self.c) + (self.c*self.N)))
-            pfk[k] = self.stimulus_prob(stimulus, k)
         
+        for k in range(self.clusters):
+            pk[k] = np.log(
+                (self.c * sum([cl == k for cl in self.partition])) /
+                ((1.0 - self.c) + (self.c * self.N))
+            )
+            pfk[k] = self.stimulus_prob(stim_idx, k)
         if self.clusters < self.max_clusters:
-            pk[self.clusters] = np.log((1.0-self.c) / (( 1.0-self.c ) + (self.c *self.N)))
-            pfk[self.clusters] = self.stimulus_prob(stimulus, self.clusters)
+            pk[self.clusters] = np.log(
+                (1.0 - self.c) / ((1.0 - self.c) + (self.c * self.N))
+            )
+            pfk[self.clusters] = self.stimulus_prob(stim_idx, self.clusters)
         num = pk + pfk
         denom = logsumexp(num)
         pkf = num - denom
         if VERBOSE:
-            print("p(k)s: ", np.exp(pk), 'Sum: ', np.sum(np.exp(pk)))
-            print("p(f|k)s: ", np.exp(pfk))
-            print("p(k|f): ", np.exp(pkf), 'Sum: ', np.sum(np.exp(pkf)))
+            print("p(k): ", np.exp(pk), " sum=", np.sum(np.exp(pk)))
+            print("p(f|k): ", np.exp(pfk))
+            print("p(k|f): ", np.exp(pkf), " sum=", np.sum(np.exp(pkf)))
         self.current_posterior = pkf
-        self.last_stimuli = self.stimuli[stimulus]
         return pkf
-
-    def register_item(self, stim):
-        self.stimuli.append(stim)
-        self.partition.append(-1)
-        return len(self.stimuli) - 1
     
     def get_item_likelihood(self, stim, label):
-        stim_idx = self.register_item(stim)
+        # add stimulus to system
+        self.stimuli.append(stim) 
+        stim_idx = len(self.stimuli) - 1  
+        # compute prob distribution
         posterior = self.compute_posterior(stim_idx)
-        if self.label_to_cluster[label] is None:
+        # get choice idx and update system
+        if label not in self.label_to_cluster:
             choice_idx = self.clusters
-            self.clusters += 1
             self.label_to_cluster[label] = choice_idx
+            self.cluster_to_label[choice_idx] = label
+            self.clusters += 1
             if self.clusters == self.max_clusters:
-                self.c = 1.0
+                self.c = 1.0  # force c to 1 if at max clusters
         else:
             choice_idx = self.label_to_cluster[label]
-        prob = posterior[choice_idx]
-        self.partition[stim_idx] = choice_idx
+        self.partition.append(choice_idx)
         self.N += 1
-        return prob
+        return posterior, choice_idx

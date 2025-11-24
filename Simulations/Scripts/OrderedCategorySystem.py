@@ -220,6 +220,7 @@ def compute_possible_scores(trials, order_dic, item_space):
             syst = CategorySystem(item_hash, '..\\..\\Katie2025_AlienTaxonomist\\static_98863bd139ec98cf6bc52549beaaf679\\taxonomies\\tree3D.json')
         orders = order_dic[f'{l}{o}']
         trial_data = []
+        i = 0
         for i_ord in orders:
             start_syst = copy.deepcopy(syst)
             order_data = []
@@ -244,6 +245,7 @@ def compute_possible_scores(trials, order_dic, item_space):
                 choice_idx = cats.index(cat_choice)
                 order_data.append((np.array(syst_scores), choice_idx))
                 start_syst = potential_systs[choice_idx]  
-            trial_data.append(order_data)
+            trial_data.append((order_data, i))
+            i += 1
         all_data[t['P_ID']].append(trial_data)
     return all_data, D, lookUpTree
