@@ -215,9 +215,9 @@ def compute_possible_scores(trials, order_dic, item_space):
         d, l, o = t['DEPTH'], t['LOC'], t['ORDER']
         cat_assigns = t['ITEMS']
         if d == 2:
-            syst = CategorySystem(item_hash, '..\\..\\Katie2025_AlienTaxonomist\\static_98863bd139ec98cf6bc52549beaaf679\\taxonomies\\tree2D.json')
+            syst = CategorySystem(item_hash, '..\\Katie2025_AlienTaxonomist\\static_98863bd139ec98cf6bc52549beaaf679\\taxonomies\\tree2D.json')
         else:
-            syst = CategorySystem(item_hash, '..\\..\\Katie2025_AlienTaxonomist\\static_98863bd139ec98cf6bc52549beaaf679\\taxonomies\\tree3D.json')
+            syst = CategorySystem(item_hash, '..\\Katie2025_AlienTaxonomist\\static_98863bd139ec98cf6bc52549beaaf679\\taxonomies\\tree3D.json')
         orders = order_dic[f'{l}{o}']
         trial_data = []
         i = 0
