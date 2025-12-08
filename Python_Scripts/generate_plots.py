@@ -2,7 +2,7 @@ import pandas as pd
 from scipy import stats
 from matplotlib import pyplot as plt
 
-def order_effects_plot(df, fname='Figures/AXB_by_order_loc', figsize=(3.2, 4), legend=False):
+def order_effects_plot(df, fname='Figures/LXR_by_order_loc', figsize=(3.2, 4), legend=False):
     grouped_df = df.groupby(['LOC', 'ORDER']).mean(numeric_only=True).reset_index()
     counts = df.groupby(['LOC', 'ORDER']).count().reset_index()
     sem = df.groupby(['LOC', 'ORDER']).sem(numeric_only=True).reset_index() 
@@ -20,11 +20,11 @@ def order_effects_plot(df, fname='Figures/AXB_by_order_loc', figsize=(3.2, 4), l
         for j in range(4):
             ax = axes[i, j]
             ax.tick_params(axis='both', which='major', labelsize=9)
-            x = ['A', 'X', 'B']
+            x = ['L', 'X', 'R']
             order = orders[j].lower()[0]
             loc = locations[i][0]
-            y = grouped_df[(grouped_df['LOC'] == loc) & (grouped_df['ORDER'] == order)][['PROP_A', 'PROP_X', 'PROP_B']].values[0]
-            y_err = sem[(sem['LOC'] == loc) & (sem['ORDER'] == order)][['PROP_A', 'PROP_X', 'PROP_B']].values[0]
+            y = grouped_df[(grouped_df['LOC'] == loc) & (grouped_df['ORDER'] == order)][['PROP_L', 'PROP_X', 'PROP_R']].values[0]
+            y_err = sem[(sem['LOC'] == loc) & (sem['ORDER'] == order)][['PROP_L', 'PROP_X', 'PROP_R']].values[0]
             ax.bar(x, y, color=['#D81B60', '#1E88E5', '#FFC107'], edgecolor='black', width=0.75, linewidth=0.5)
             if i == 0:
                 ax.set_title(f'{orders[j]}', fontsize=9.5)
@@ -50,7 +50,7 @@ def order_effects_plot(df, fname='Figures/AXB_by_order_loc', figsize=(3.2, 4), l
                 plt.Rectangle((0,0),0.5,0.5, facecolor='#1E88E5', edgecolor='black', linewidth=0.5),
                 plt.Rectangle((0,0),0.5,0.5, facecolor='#FFC107', edgecolor='black', linewidth=0.5),
             ]
-            labels = ['A', 'X', 'B']
+            labels = ['L', 'X', 'R']
             fig.legend(
                 handles,
                 labels,
@@ -81,20 +81,20 @@ def new_category_plot(df, fname='Figures/X_by_depth', figsize=(3,3)):
 
     #  green = #004D40
 
-def generate_summary_AXB_plot(df, column, colVals, names, figsize=(6.25, 2.15), overall=False, fname='Figures/summary'):
-    stim_df = df.groupby([column]).mean(numeric_only=True).reset_index()[[column, 'PROP_A', 'PROP_B', 'PROP_X']]   
-    counts = df.groupby([column]).count().reset_index()[[column, 'PROP_A', 'PROP_B', 'PROP_X']]   
-    sem = df.groupby([column]).sem(numeric_only=True).reset_index()[[column, 'PROP_A', 'PROP_B', 'PROP_X']]  
+def generate_summary_LXR_plot(df, column, colVals, names, figsize=(6.25, 2.15), overall=False, fname='Figures/summary'):
+    stim_df = df.groupby([column]).mean(numeric_only=True).reset_index()[[column, 'PROP_L', 'PROP_R', 'PROP_X']]   
+    counts = df.groupby([column]).count().reset_index()[[column, 'PROP_L', 'PROP_R', 'PROP_X']]   
+    sem = df.groupby([column]).sem(numeric_only=True).reset_index()[[column, 'PROP_L', 'PROP_R', 'PROP_X']]  
     # condifence intervals instead??
     numAx = len(colVals)
     if overall:
-        avg = df[['PROP_A', 'PROP_X', 'PROP_B']].mean(numeric_only=True).values
-        overall_err = df[['PROP_A', 'PROP_X', 'PROP_B']].sem(numeric_only=True).values
+        avg = df[['PROP_L', 'PROP_X', 'PROP_R']].mean(numeric_only=True).values
+        overall_err = df[['PROP_L', 'PROP_X', 'PROP_R']].sem(numeric_only=True).values
         numAx += 1
     fig, axes = plt.subplots(1, numAx, figsize=figsize, constrained_layout=True)
     for i in range(numAx):
             ax = axes[i]
-            x = ['A', 'X', 'B']
+            x = ['L', 'X', 'R']
             if overall and i == 0:
                 y = avg
                 yerr = overall_err
@@ -102,15 +102,15 @@ def generate_summary_AXB_plot(df, column, colVals, names, figsize=(6.25, 2.15), 
                 ax.set_title('Overall', fontsize=9.5)
             elif overall:
                 val = colVals[i-1]
-                y = stim_df[stim_df[column] == val][['PROP_A', 'PROP_X', 'PROP_B']].values[0]
-                yerr = sem[sem[column] == val][['PROP_A', 'PROP_X', 'PROP_B']].values[0]
-                ax.text(-0.42, 0.89, f"T = {counts[counts[column] == val]['PROP_A'].iloc[0]}", size=8)
+                y = stim_df[stim_df[column] == val][['PROP_L', 'PROP_X', 'PROP_R']].values[0]
+                yerr = sem[sem[column] == val][['PROP_L', 'PROP_X', 'PROP_R']].values[0]
+                ax.text(-0.42, 0.89, f"T = {counts[counts[column] == val]['PROP_L'].iloc[0]}", size=8)
                 ax.set_title(f'{names[i-1]}', fontsize=9.5)
             else:
                 val = colVals[i]
-                y = stim_df[stim_df[column] == val][['PROP_A', 'PROP_X', 'PROP_B']].values[0]
-                yerr = sem[sem[column] == val][['PROP_A', 'PROP_X', 'PROP_B']].values[0]
-                ax.text(-0.42, 0.89, f"T = {counts[counts[column] == val]['PROP_A'].iloc[0]}", size=8)
+                y = stim_df[stim_df[column] == val][['PROP_L', 'PROP_X', 'PROP_R']].values[0]
+                yerr = sem[sem[column] == val][['PROP_L', 'PROP_X', 'PROP_R']].values[0]
+                ax.text(-0.42, 0.89, f"T = {counts[counts[column] == val]['PROP_L'].iloc[0]}", size=8)
                 ax.set_title(f'{names[i]}', fontsize=9.5)
             ax.bar(x, y, color=['#D81B60', '#1E88E5', '#FFC107'], edgecolor='black', width=0.75, linewidth=0.5)#, yerr=yerr, capsize=3)
             # ax.set_xticks(['A', 'X', 'B'])
@@ -128,7 +128,7 @@ def generate_summary_AXB_plot(df, column, colVals, names, figsize=(6.25, 2.15), 
                 plt.Rectangle((0,0),0.5,0.5, facecolor='#1E88E5', edgecolor='black', linewidth=0.5),
                 plt.Rectangle((0,0),0.5,0.5, facecolor='#FFC107', edgecolor='black', linewidth=0.5),
             ]
-            labels = ['A', 'X', 'B']
+            labels = ['L', 'X', 'R']
             fig.legend(
                 handles,
                 labels,

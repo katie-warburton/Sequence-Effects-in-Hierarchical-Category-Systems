@@ -44,13 +44,13 @@ def get_experimental_trials(data, prefix):
 
 def check_distractors(cat_choices):
     incorrect = 0
-    if cat_choices['1'][0] != 'A':
+    if cat_choices['1'][0] != 'L':
         incorrect += 1
-    if cat_choices['3.01'][0] != 'A':
+    if cat_choices['3.01'][0] != 'L':
         incorrect += 1
-    if cat_choices['31'][0] != 'B':
+    if cat_choices['31'][0] != 'R':
         incorrect += 1
-    if cat_choices['29.01'][0] != 'B':
+    if cat_choices['29.01'][0] != 'R':
         incorrect += 1
     return incorrect
 
@@ -72,6 +72,28 @@ def get_missing_label(trial_row, final_tree):
         trial_row[it] = label
     return trial_row
 
+def replace_cat(cat_label):
+    if cat_label == 'AA':
+        return 'L1'
+    elif cat_label == 'AB':
+        return 'L2'
+    elif cat_label == 'AY':
+        return 'L3'
+    elif cat_label == 'BY':
+        return 'R3'
+    elif cat_label == 'BA':
+        return 'R2'
+    elif cat_label == 'BB':
+        return 'R1'
+    elif cat_label == 'XY':
+        return 'X1'
+    elif cat_label == 'A':
+        return 'L'
+    elif cat_label == 'B':
+        return 'R'
+    else:
+        return cat_label
+    
 def extract_dfs(exp_data):
     trial_data, participant_data, sequence_data = [], [], []
     for pid, trials in exp_data.items():
@@ -107,6 +129,8 @@ def extract_dfs(exp_data):
                     sequence_data.append(sequence_row)
                 if None in trial_row.values():
                     trial_row = get_missing_label(trial_row, tr['final_tree'])
+                # change A and B to L and R
+                trial_row = {it: replace_cat(cat) for it, cat in trial_row.items()}
                 errors = check_distractors(trial_row)
                 trial_row['P_ID'] = pid
                 trial_row['DEPTH'] = d

@@ -12,11 +12,11 @@ def first_char(val):
 def get_level2_cat_stats(df_orig, items):
     df = copy.deepcopy(df_orig)
     df[items] = df[items].map(first_char)
-    df['NUM_A'] = df[df[items] == 'A'].count(axis=1)
-    df['NUM_B'] = df[df[items] == 'B'].count(axis=1)
+    df['NUM_L'] = df[df[items] == 'L'].count(axis=1)
+    df['NUM_R'] = df[df[items] == 'R'].count(axis=1)
     df['NUM_X'] = df[df[items] == 'X'].count(axis=1)
-    df['PROP_A'] = df['NUM_A']/9
-    df['PROP_B'] = df['NUM_B']/9
+    df['PROP_L'] = df['NUM_L']/9
+    df['PROP_R'] = df['NUM_R']/9
     df['PROP_X'] = df['NUM_X']/9
     df['HAS_X'] = df['NUM_X'].apply(lambda x: 1 if x > 0 else 0)
     return df
@@ -62,10 +62,10 @@ def jsd_no_nan(dist1, dist2):
 
 def get_jsds(df, loc):
     df_at_loc = df[df['LOC'] == loc]
-    dist_a = np.array(df_at_loc[df_at_loc['ORDER'] == 'a'][['PROP_A', 'PROP_X', 'PROP_B']].mean().values)
-    dist_f = np.array(df_at_loc[df_at_loc['ORDER'] == 'f'][['PROP_A', 'PROP_X', 'PROP_B']].mean().values)
-    dist_m = np.array(df_at_loc[df_at_loc['ORDER'] == 'm'][['PROP_A', 'PROP_X', 'PROP_B']].mean().values)
-    dist_b = np.array(df_at_loc[df_at_loc['ORDER'] == 'b'][['PROP_A', 'PROP_X', 'PROP_B']].mean().values)
+    dist_a = np.array(df_at_loc[df_at_loc['ORDER'] == 'a'][['PROP_L', 'PROP_X', 'PROP_R']].mean().values)
+    dist_f = np.array(df_at_loc[df_at_loc['ORDER'] == 'f'][['PROP_L', 'PROP_X', 'PROP_R']].mean().values)
+    dist_m = np.array(df_at_loc[df_at_loc['ORDER'] == 'm'][['PROP_L', 'PROP_X', 'PROP_R']].mean().values)
+    dist_b = np.array(df_at_loc[df_at_loc['ORDER'] == 'b'][['PROP_L', 'PROP_X', 'PROP_R']].mean().values)
 
     jsd_f = jsd_no_nan(dist_f, dist_a)
     jsd_m = jsd_no_nan(dist_m, dist_a)
