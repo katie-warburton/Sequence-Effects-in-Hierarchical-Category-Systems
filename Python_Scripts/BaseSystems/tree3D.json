@@ -1,0 +1,27 @@
+{
+    "name": "ROOT",
+    "root": true,
+    "visible": true,
+    "can_add": false,
+    "children": [
+        {
+            "name": "L", "visible": true , "can_add": false, "children": [
+                {"name": "L1", "visible": true, "can_add": true, "items": [2, 3, 4], "children": []},
+                {"name": "L2", "visible": true,  "can_add": true,"items": [6, 7, 8], "children": []},
+                {"name": "L3", "visible": false,  "can_add": true, "items": [], "children": []}
+            ]
+        },
+        {
+            "name": "X", "visible": false, "can_add": true, "children": [
+                {"name": "X1", "visible": false, "can_add": false, "items": [], "children":[]}
+            ]
+        },
+        {
+            "name": "R", "visible": true, "can_add": false, "children": [
+                {"name": "R3", "visible": false, "can_add": true, "items": [], "children": []},
+                {"name": "R2", "visible": true, "can_add": true, "items": [24, 25, 26], "children": []},
+                {"name": "R1", "visible": true, "can_add": true, "items": [28, 29, 30], "children": []}
+            ]
+        }
+    ]
+}
