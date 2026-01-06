@@ -208,7 +208,8 @@ def get_distance_mat(items, min_it=None, max_it=None, noise=0):
         np.fill_diagonal(D, 0)
     return D, item_hash
 
-def compute_possible_scores(trials, item_space):
+
+def compute_possible_scores(trials, item_space, folder='Python_Scripts/BaseSystems'):
     D, item_hash = get_distance_mat(item_space)
     lookUpTree = defaultdict(lambda: None)
     all_data = {tr['P_ID']: [] for tr in trials}
@@ -216,18 +217,16 @@ def compute_possible_scores(trials, item_space):
         d = tr['DEPTH']
         cat_assigns = tr['ITEMS']
         if d == 2:
-            syst = CategorySystem(item_hash, '..\\Katie2025_AlienTaxonomist\\static_98863bd139ec98cf6bc52549beaaf679\\taxonomies\\tree2D.json')
+            syst = CategorySystem(item_hash, f'{folder}/tree2D.json')
         else:
-            syst = CategorySystem(item_hash, '..\\Katie2025_AlienTaxonomist\\static_98863bd139ec98cf6bc52549beaaf679\\taxonomies\\tree3D.json')
+            syst = CategorySystem(item_hash, f'{folder}/tree3D.json')
         trial_data = []
-        # print(tr['SEQUENCE'])
         for t in range(len(cat_assigns)):
             syst_scores = []
             cats = []
             potential_systs = []
             current_syst = syst
             item = tr['SEQUENCE'][f't{t+1:02}']
-            # print(f't{t:02}', item)
             for i in range(len(current_syst.can_add)):
                 test_syst = copy.deepcopy(current_syst)
                 cat = test_syst.can_add[i]
@@ -246,3 +245,60 @@ def compute_possible_scores(trials, item_space):
             trial_data.append((syst_scores, choice_idx))
         all_data[tr['P_ID']].append(trial_data)
     return all_data, D, lookUpTree
+
+
+def get_participant_loglike(data, determ=False, temp=1.0, alpha=0.0):
+    total_log_like = 0.0
+    for trial in data:
+        sys_scores_array = np.array([s for s, _ in trial], dtype=np.float64)
+        choice_indices = np.array([c for _, c in trial], dtype=int)
+        if determ:
+            probs = np.zeros_like(sys_scores_array)
+            probs[np.arange(len(sys_scores_array)), sys_scores_array.argmax(1)] = 1
+            probs = probs/probs.sum(axis=1)[:,None] # make options equally likely if the same score
+        else:
+            probs = softmax(sys_scores_array, temp)
+        K = probs.shape[1] 
+        choice_prob = probs[np.arange(probs.shape[0]), choice_indices]
+        random_baseline = np.full_like(choice_prob, 1.0 / K)
+
+        # might want to come up with a way to fit it to two-level probabilities
+    
+        p_choice = ((1 - alpha) * choice_prob) + (alpha * random_baseline)
+        total_log_like += np.sum(np.log(p_choice))
+    return total_log_like
+
+# Assumes you've precomputed participant system scores
+def get_total_log_like(participants, determ=False, temp=1.0, alpha=0.0):
+    total_log_like = 0.0
+    for data in participants.values():
+        total_log_like += get_participant_loglike(data, determ, temp, alpha)
+    return total_log_like
+
+def find_best_params(data, params, determ=False):
+    best_ll = -np.inf
+    if determ:
+        alphas = params
+        best_a = None
+        for a in alphas:
+            ll = get_total_log_like(data, determ=True, alpha=a)
+            if ll > best_ll:
+                best_ll = ll
+                best_a = a
+        stats = (best_a, best_ll)
+    else:
+        temps, alphas = params
+        best_t, best_a = None, None
+        for t in temps:
+            prev_ll = None
+            for a in alphas:
+                ll = get_total_log_like(data, determ, t, a)
+                if ll > best_ll:
+                    best_ll = ll
+                    best_t, best_a = t, a
+                # Alphas are concave - can stop if it starts decreasing
+                if prev_ll is not None and ll < prev_ll:
+                    break
+                prev_ll = ll
+        stats = (best_t, best_a, best_ll)
+    return stats
