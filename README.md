@@ -1,3 +1,3 @@
-# Order Effects in Hierarchical Category Systems
+# The Evolution of Hierarchical Category Systems
 
-Code to analyze and simulate exprimental data examining order effects in hierarchical category systems as they change over time. 
+Code to analyze data examining the evolution of hierarchical category systems as they change over time. 
