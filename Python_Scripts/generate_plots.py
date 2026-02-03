@@ -16,17 +16,13 @@ def bootstrap_LXR_confidence_intervals(df, p):
     l_vec.sort(), x_vec.sort(), r_vec.sort()
     return np.array([l_vec[lb], x_vec[lb], r_vec[lb]]), np.array([l_vec[ub], x_vec[ub], r_vec[ub]])
 
-def order_effects_plot(df, fname='Figures/LXR_by_order_loc', figsize=(3.2, 4), legend=False, show_counts=True):
+def order_effects_plot(df, fname='Figures/LXR_by_order_loc.jpg', figsize=(3.2, 4), legend=False, show_counts=True):
     grouped_df = df.groupby(['LOC', 'ORDER']).mean(numeric_only=True).reset_index()
     counts = df.groupby(['LOC', 'ORDER']).count().reset_index()
-    sem = df.groupby(['LOC', 'ORDER']).sem(numeric_only=True).reset_index() 
     overall = df.groupby(['ORDER']).mean(numeric_only=True).reset_index()
     overall['LOC'] = ['O', 'O', 'O', 'O']
 
-    overall_sem = df.groupby(['ORDER']).sem(numeric_only=True).reset_index()
-    overall_sem['LOC']  = ['O', 'O', 'O', 'O']
     grouped_df = pd.concat([grouped_df, overall])
-    sem = pd.concat([sem, overall_sem])
     fig, axes = plt.subplots(4, 4, figsize=figsize, constrained_layout=True)
     orders = ['Forward', 'Middle', 'Backward', 'All at once']
     locations = ['Left', 'Center', 'Right', 'Overall']
@@ -79,9 +75,9 @@ def order_effects_plot(df, fname='Figures/LXR_by_order_loc', figsize=(3.2, 4), l
                 frameon=False,
                 fontsize=9
             )
-    fig.savefig(f'{fname}.jpg', dpi=600, bbox_inches='tight')
+    fig.savefig(f'{fname}', dpi=600, bbox_inches='tight')
     
-def new_category_plot(df, fname='Figures/X_by_depth', figsize=(3,3)):
+def new_category_plot(df, fname='Figures/X_by_depth.jpg', figsize=(3,3)):
     df_hyp3 = df[['DEPTH', 'HAS_X']].groupby(['DEPTH']).mean().reset_index()
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     ax.bar(x='DEPTH', height='HAS_X' , data=df_hyp3, color=['#785ef0', '#fe6100'], edgecolor="black", capsize=6)
@@ -92,9 +88,9 @@ def new_category_plot(df, fname='Figures/X_by_depth', figsize=(3,3)):
     ax.set_xticks([2, 3])
     ax.text(1.6, 0.92, f'T = {df.shape[0]}', size=10)
     ax.spines[['right', 'top']].set_visible(False)
-    fig.savefig(f'{fname}.jpg', dpi=300, bbox_inches='tight') 
+    fig.savefig(f'{fname}', dpi=300, bbox_inches='tight') 
 
-def generate_summary_LXR_plot(df, column, colVals, names, figsize=(6.25, 2.15), overall=False, fname='Figures/summary', legend=True, ylabel='Mean % of items'):
+def generate_summary_LXR_plot(df, column, colVals, names, figsize=(6.25, 2.15), overall=False, fname='Figures/summary.jpg', legend=True, ylabel='Mean % of items'):
     stim_df = df.groupby([column]).mean(numeric_only=True).reset_index()[[column, 'PROP_L', 'PROP_R', 'PROP_X']]   
     counts = df.groupby([column]).count().reset_index()[[column, 'PROP_L', 'PROP_R', 'PROP_X']]   
     numAx = len(colVals)
@@ -107,19 +103,19 @@ def generate_summary_LXR_plot(df, column, colVals, names, figsize=(6.25, 2.15), 
             x = ['L', 'X', 'R']
             if overall and i == 0:
                 y = avg
-                ax.text(-0.42, 0.89, f'T = {df.shape[0]}', size=8)
+                ax.text(-0.42, 0.87, f'T = {df.shape[0]}', size=8)
                 ax.set_title('Overall', fontsize=9.5)
                 ci_lb, ci_ub  = bootstrap_LXR_confidence_intervals(df, 5000)
             elif overall:
                 val = colVals[i-1]
                 y = stim_df[stim_df[column] == val][['PROP_L', 'PROP_X', 'PROP_R']].values[0]
-                ax.text(-0.42, 0.89, f"T = {counts[counts[column] == val]['PROP_L'].iloc[0]}", size=8)
+                ax.text(-0.42, 0.87, f"T = {counts[counts[column] == val]['PROP_L'].iloc[0]}", size=8)
                 ax.set_title(f'{names[i-1]}', fontsize=9.5)
                 ci_lb, ci_ub  = bootstrap_LXR_confidence_intervals(df[df[column] == val], 5000)
             else:
                 val = colVals[i]
                 y = stim_df[stim_df[column] == val][['PROP_L', 'PROP_X', 'PROP_R']].values[0]
-                ax.text(-0.42, 0.89, f"T = {counts[counts[column] == val]['PROP_L'].iloc[0]}", size=8)
+                ax.text(-0.42, 0.87, f"T = {counts[counts[column] == val]['PROP_L'].iloc[0]}", size=8)
                 ax.set_title(f'{names[i]}', fontsize=9.5)
                 ci_lb, ci_ub  = bootstrap_LXR_confidence_intervals(df[df[column] == val], 5000)
             ci_lb = y - ci_lb
@@ -130,7 +126,7 @@ def generate_summary_LXR_plot(df, column, colVals, names, figsize=(6.25, 2.15), 
             ax.tick_params(axis='both', which='major', labelsize=8)
             if i == 0:
                 ax.set_yticks([0.0, 0.5, 1.0])
-                ax.set_ylabel(ylabel, fontsize=9)
+                ax.set_ylabel(ylabel, fontsize=8)
             else:
                 ax.set_yticks([])
             ax.set_ylim(0, 1)
@@ -152,10 +148,10 @@ def generate_summary_LXR_plot(df, column, colVals, names, figsize=(6.25, 2.15), 
                     frameon=False,
                     fontsize=8
                 )
-    fig.savefig(f'{fname}.jpg', dpi=600, bbox_inches='tight')
+    fig.savefig(f'{fname}', dpi=600, bbox_inches='tight')
 
 
-def same_as_dist(seq_df, fname='Figures/same_as_dist', figsize=(4, 2.5)):
+def same_as_dist(seq_df, fname='Figures/same_as_dist.jpg', figsize=(4, 2.5)):
     dist = seq_df['PROP_SAME'].value_counts().reset_index()
     dist['prop'] = dist['count'] / seq_df.shape[0]
     max_prob = dist['prop'].max()
@@ -177,4 +173,4 @@ def same_as_dist(seq_df, fname='Figures/same_as_dist', figsize=(4, 2.5)):
     ax.tick_params(axis='both', which='major', labelsize=10)
     ax.spines[['right', 'top']].set_visible(False)
     fig.tight_layout()
-    fig.savefig(f'{fname}.jpg', dpi=300, bbox_inches='tight')
+    fig.savefig(f'{fname}', dpi=300, bbox_inches='tight')

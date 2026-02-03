@@ -99,3 +99,22 @@ def perm_test(df, loc, it):
         if temp_diff2 >= diff2:
             p2 += 1
     return p1/it, p2/it
+
+def get_jsd2(df, loc, order):
+    df_at_loc = df[df['LOC'] == loc]
+    dist_a = np.array(df_at_loc[df_at_loc['ORDER'] == 'a'][['PROP_L', 'PROP_X', 'PROP_R']].mean().values)
+    dist_ord = np.array(df_at_loc[df_at_loc['ORDER'] == order][['PROP_L', 'PROP_X', 'PROP_R']].mean().values)
+    jsd = jsd_no_nan(dist_ord, dist_a)
+    return jsd
+
+def perm_test2(df, loc, order, it):
+    jsd = get_jsd2(df, loc, order)
+    seq_df = copy.deepcopy(df)
+    seq_df = seq_df[(seq_df['LOC'] == loc) & (seq_df['ORDER'].isin(['a', order]))].reset_index()
+    p = 0
+    for _ in range(it):
+        seq_df['ORDER'] = seq_df['ORDER'].sample(frac=1, random_state=13).values
+        rand_jsd = get_jsd2(seq_df, loc, order)
+        if rand_jsd >= jsd:
+            p += 1
+    return p/it

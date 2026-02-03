@@ -156,7 +156,8 @@ def greedy_categorizer(best_syst, item_seq, D, treeLookup = None):
         best_idx = random.randint(0, len(potential_systs) - 1)
         best_syst = potential_systs[best_idx]
         cat_choices[item] = best_cat[best_idx]
-    return best_syst, cat_choices    
+        current_score = high_score
+    return current_score, cat_choices    
 
 def softmax(x, temp):
     x = x / temp
@@ -190,7 +191,8 @@ def greedy_categorizer_softmax(best_syst, item_seq, D, treeLookup=None, temp=1, 
         best_idx = np.random.choice([ix for ix in range(len(potential_systs))], p=prob_dist)
         best_syst = potential_systs[best_idx]
         cat_choices[item] = cats[best_idx]
-    return best_syst, cat_choices
+        current_score = sys_scores[best_idx]
+    return current_score, cat_choices
 
 def get_distance_mat(items, min_it=None, max_it=None, noise=0):
     item_hash = {lab+1: lab for lab in range(len(items))}
