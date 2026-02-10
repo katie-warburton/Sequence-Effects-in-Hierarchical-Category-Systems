@@ -164,7 +164,7 @@ def softmax(x, temp):
     e_x = np.exp(x)
     return e_x / np.sum(e_x, axis=-1, keepdims=True)
 
-def greedy_categorizer_softmax(best_syst, item_seq, D, treeLookup=None, temp=1):
+def greedy_categorizer_softmax(best_syst, item_seq, D, treeLookup=None, temp=1, alpha=0.0):
     cat_choices = {}
     if treeLookup is None:
         treeLookup = defaultdict(lambda: None)
@@ -185,7 +185,8 @@ def greedy_categorizer_softmax(best_syst, item_seq, D, treeLookup=None, temp=1):
             potential_systs.append(test_syst)
             cats.append(cat.label)
         prob_dist = softmax(np.array(sys_scores), temp)
-        best_idx = np.random.choice([ix for ix in range(len(potential_systs))], p=prob_dist)
+        mixture = (1-alpha)*prob_dist + alpha*(1/prob_dist.shape[0])
+        best_idx = np.random.choice([ix for ix in range(len(potential_systs))], p=mixture)
         best_syst = potential_systs[best_idx]
         cat_choices[item] = cats[best_idx]
     return best_syst, cat_choices
@@ -212,7 +213,8 @@ def get_distance_mat(items, min_it=None, max_it=None, noise=0):
 def compute_possible_scores(trials, item_space, folder='Python_Scripts/BaseSystems'):
     D, item_hash = get_distance_mat(item_space)
     lookUpTree = defaultdict(lambda: None)
-    all_data = {tr['P_ID']: [] for tr in trials}
+    two_level_data = {tr['P_ID']: [] for tr in trials}
+    three_level_data = {tr['P_ID']: [] for tr in trials}
     for tr in trials:
         d = tr['DEPTH']
         cat_assigns = tr['ITEMS']
@@ -243,9 +245,29 @@ def compute_possible_scores(trials, item_space, folder='Python_Scripts/BaseSyste
             choice_idx = cats.index(cat_choice)
             syst = potential_systs[choice_idx]  
             trial_data.append((syst_scores, choice_idx))
-        all_data[tr['P_ID']].append(trial_data)
-    return all_data, D, lookUpTree
+        if d == 2:
+            two_level_data[tr['P_ID']].append(trial_data)
+        else:
+            three_level_data[tr['P_ID']].append(trial_data)
+    return two_level_data, three_level_data
 
+
+def convert_indices(probs, indices, K=7):
+    new_probs = np.zeros((probs.shape[0],1))
+    left = np.where(indices < 3)[0]
+    new_probs[left,:] = np.sum(probs[left,:3], axis=1, keepdims=True)
+    right = np.where(indices > 3)[0]
+    new_probs[right,:] = np.sum(probs[right,4:], axis=1, keepdims=True)
+
+    middle = np.where(indices == 3)[0]
+    new_probs[middle,:] = probs[middle,3:4]
+    new_probs = new_probs.reshape(-1)
+
+    random_baseline = np.zeros(new_probs.shape) 
+    random_baseline[left] = (1.0 / K)*3
+    random_baseline[right] = (1.0 / K)*3
+    random_baseline[middle] = (1.0 / K)
+    return new_probs, random_baseline
 
 def get_participant_loglike(data, determ=False, temp=1.0, alpha=0.0):
     total_log_like = 0.0
@@ -259,12 +281,12 @@ def get_participant_loglike(data, determ=False, temp=1.0, alpha=0.0):
         else:
             probs = softmax(sys_scores_array, temp)
         K = probs.shape[1] 
-        choice_prob = probs[np.arange(probs.shape[0]), choice_indices]
-        random_baseline = np.full_like(choice_prob, 1.0 / K)
 
-        # might want to come up with a way to fit it to two-level probabilities
+        choice_prob = probs[np.arange(probs.shape[0]), choice_indices]
+        random_baseline = np.full_like(choice_prob, 1.0 / K)  
     
         p_choice = ((1 - alpha) * choice_prob) + (alpha * random_baseline)
+
         total_log_like += np.sum(np.log(p_choice))
     return total_log_like
 
@@ -275,13 +297,22 @@ def get_total_log_like(participants, determ=False, temp=1.0, alpha=0.0):
         total_log_like += get_participant_loglike(data, determ, temp, alpha)
     return total_log_like
 
+
+def get_loglike_and_n(participants, determ=False, temp=1.0, alpha=0.0):
+    total_log_like = 0.0
+    n_trials = 0
+    for data in participants.values():
+        total_log_like += get_participant_loglike(data, determ, temp, alpha)
+        n_trials += len(data)
+    return total_log_like, n_trials
+
 def find_best_params(data, params, determ=False):
     best_ll = -np.inf
     if determ:
         alphas = params
         best_a = None
         for a in alphas:
-            ll = get_total_log_like(data, determ=True, alpha=a)
+            ll = get_total_log_like(data, determ, alpha=a)
             if ll > best_ll:
                 best_ll = ll
                 best_a = a
