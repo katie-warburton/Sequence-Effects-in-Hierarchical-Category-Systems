@@ -154,17 +154,17 @@ def extract_dfs(exp_data):
         participant_data.append(participant_row)
     # make and save participant data frame
     participant_data = pd.DataFrame.from_dict(participant_data)
-    participant_data.to_csv('Results/participant_data.csv', index=None)
+    participant_data.to_csv('Data/participant_data.csv', index=None)
     # make an save trial data in a data frame
     trial_data = pd.DataFrame.from_dict(trial_data)
     trial_data = trial_data[['P_ID', 'DEPTH', 'LOC', 'ORDER'] + [f'{i}' for i in range(9, 24)] + DISTRACTORS + ['ERRORS', 'STIMULI', 'POOL', 'SCORE']]
     trial_data.rename(columns={f'{i}':f'I{i:02}' for i in range(9, 24)}, inplace=True)
     trial_data.rename(columns={'1': 'I01', '3.01': 'I03', '29.01': 'I29', '31': 'I31'}, inplace=True)
-    trial_data.to_csv('Results/trial_data.csv', index=None)
+    trial_data.to_csv('Data/trial_data.csv', index=None)
     # make and save sequence data if included
     sequence_data = pd.DataFrame.from_dict(sequence_data)
     sequence_data = sequence_data[['P_ID', 'DEPTH', 'LOC', 'ORDER'] + [f't{i:02}' for i in range(1, 14)] + ['STIMULI']]
-    sequence_data.to_csv('Results/sequence_data.csv', index=None)
+    sequence_data.to_csv('Data/sequence_data.csv', index=None)
 
 def remove_duplicates(data):
     seen = set()
@@ -205,4 +205,4 @@ def main(filepath):
 
     extract_dfs(prolific1 | rep | prolific2)   
 
-main('Results/results-98863bd139ec98cf6bc52549beaaf679-2025-12-07-23-58-07.json')
+main('Data/results-98863bd139ec98cf6bc52549beaaf679-2025-12-07-23-58-07.json')
