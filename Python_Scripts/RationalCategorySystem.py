@@ -64,7 +64,6 @@ class RationalModel:
             var = np.var(items, ddof=1)
         else:
             var = 0
-        
         mu_i = ((self.lambda_0[i]*self.mu_0[i]) + (n * xbar)) / lambda_i
         if n == 0:
             sigmasq_i=self.sigmasq_0[i]
@@ -157,13 +156,43 @@ def get_trial_loglike(model, choices, order, item_space, alpha=0.0, uniform=None
             log_probs.append(mixture)
     return log_like, log_probs
 
+def get_determ_choices(model, choices, order, item_space):
+    determ_probs = []
+    for t in range(len(order)):
+        it = order[f't{t+1:02}']
+        choice = choices[it]
+        item_rep = item_space[it-1]
+        prob_dist, choice_idx = model.get_item_likelihood(item_rep, choice)
+        determ_dist = np.zeros_like(prob_dist)
+        determ_dist[prob_dist == prob_dist.max()] = 1
+        determ_dist = determ_dist / determ_dist.sum() # in case two values are max -- give them equal prob
+        determ_probs.append(determ_dist[choice_idx])
+    return determ_probs
+
+def get_participant_determ_choices(data, item_space, depth, c=0.5):
+    determ_probs = []
+    existing_items = [item_space[i] for i in [1, 2, 3, 5, 6, 7, 23, 24, 25, 27, 28, 29]]
+    mu_0 = [np.mean(item_space)]
+    var_0 = [np.var(item_space)]
+    for trial in data:
+        order = trial['SEQUENCE']
+        choices = trial['CHOICES']
+        if depth == 3:
+            syst = ['L1', 'L1', 'L1', 'L2', 'L2', 'L2', 'R2', 'R2', 'R2', 'R1', 'R1', 'R1']
+            max_new = 3
+        else:
+            syst = ['L',  'L',  'L',  'L',  'L',  'L',  'R',  'R',  'R',  'R',  'R',  'R']
+            max_new = 1
+        rcm = RationalModel(c, mu_0, var_0,  np.array([1.0]),  np.array([1.0]), partition=syst, stimuli=existing_items, max_new_clusters=max_new)
+        determ_probs.extend(get_determ_choices(rcm, choices, order, item_space))
+    return np.array(determ_probs)
+
 def get_participant_loglike(data, item_space, depth, c=0.5, alpha=0.0):
     total_ll = 0.0
     log_probs = []
     existing_items = [item_space[i] for i in [1, 2, 3, 5, 6, 7, 23, 24, 25, 27, 28, 29]]
     mu_0 = [np.mean(item_space)]
     var_0 = [np.var(item_space)]
-    i = 0
     for trial in data:
         order = trial['SEQUENCE']
         choices = trial['CHOICES']
@@ -179,26 +208,41 @@ def get_participant_loglike(data, item_space, depth, c=0.5, alpha=0.0):
         trial_ll, trial_log_probs = get_trial_loglike(rcm, choices, order, item_space, alpha, uniform)
         total_ll += trial_ll
         log_probs.extend(trial_log_probs)
-        i += 1
     return total_ll, log_probs
+
+def get_all_determ_choices(trial_data, item_space, depth, c=0.5):
+    all_choices = []
+    for _, p_data in trial_data.items():
+        determ_choices = get_participant_determ_choices(p_data, item_space, depth, c)
+        all_choices.extend(determ_choices)
+    return np.array(all_choices)
+
 
 def get_total_log_like(trial_data, item_space, depth, c=0.5, alpha=0.0):
     total_ll = 0.0
     log_probs = []
     for _, p_data in trial_data.items():
-        participant_ll, participant_log_probs =  get_participant_loglike(p_data, item_space, depth, c, alpha)
+        participant_ll, participant_log_probs = get_participant_loglike(p_data, item_space, depth, c, alpha)
         total_ll += participant_ll
         log_probs.extend(participant_log_probs)
     return total_ll, np.array(log_probs)
 
-def get_loglike_and_n(trial_data, item_space, depth, c=0.5, alpha=0.0):
+def get_loglike_and_n(trial_data, item_space, depth, c=0.5, alpha=0.0, determ=False):
     total_ll = 0.0
     n_trials = 0
     for _, p_data in trial_data.items():
-        participant_ll, _ =  get_participant_loglike(p_data, item_space, depth, c, alpha)
+        if determ:
+            determ_choices = get_participant_determ_choices(p_data, item_space, depth, c)
+            if depth == 2:
+                participant_ll = np.sum(np.log((1-alpha)*determ_choices + (alpha/3)))
+            else:
+                participant_ll = np.sum(np.log((1-alpha)*determ_choices + (alpha/7)))
+        else:
+            participant_ll, _ =  get_participant_loglike(p_data, item_space, depth, c, alpha)
         total_ll += participant_ll
         n_trials += len(p_data)
     return total_ll, n_trials
+
 
 def format_rcm_data(trial_data):
     rcmData = {t['P_ID']:[] for t in trial_data}
@@ -214,7 +258,11 @@ def find_best_params(data, item_space, depth, params, determ=False):
     best_c, best_a = None, None
     for c in c_vals:
         prev_ll = None
-        base_ll, log_probs = get_total_log_like(data, item_space, depth, c, 0)
+        if determ:
+            probs = get_all_determ_choices(data, item_space, depth, c)
+        else:
+            base_ll, log_probs = get_total_log_like(data, item_space, depth, c, 0)
+            probs = np.exp(log_probs)
         for a in alphas:
             if a == 0:
                 if determ:
@@ -222,18 +270,6 @@ def find_best_params(data, item_space, depth, params, determ=False):
                 else:
                     ll = base_ll
             else:
-                if determ: ## FIX!!!!!!!
-                    # probs = (log_probs == log_probs.max(axis=1)[:,None]).astype(int)
-                    # print(probs)
-                    # probs = probs/probs.sum(axis=1)
-                    # print(probs)
-                    probs = np.zeros_like(log_probs)
-                    probs[log_probs.argmax()] = 1
-                    print(probs)
-                    probs = probs/probs.sum()
-                    print(probs)
-                else:
-                    probs = np.exp(log_probs)
                 if depth == 2:
                     ll = np.sum(np.log((1-a)*probs + (a/3)))
                 else:
@@ -245,5 +281,5 @@ def find_best_params(data, item_space, depth, params, determ=False):
             if prev_ll is not None and ll < prev_ll:
                 break
             prev_ll = ll
-        stats = (best_c, best_a, best_ll)
+    stats = (best_c, best_a, best_ll)
     return stats
