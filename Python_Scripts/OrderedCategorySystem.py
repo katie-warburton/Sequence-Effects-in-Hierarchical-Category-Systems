@@ -128,7 +128,9 @@ def ordered_CKMM(node, D, treeLookup=None):
     treeLookup[label_key] = score
     return score 
             
-def greedy_categorizer(best_syst, item_seq, D, treeLookup = None):
+def greedy_categorizer(best_syst, item_seq, D, treeLookup = None, rng=None):
+    if rng is None:
+        rng = np.random.default_rng()
     cat_choices = {}
     if treeLookup is None:
         treeLookup = defaultdict(lambda: None)
@@ -153,7 +155,7 @@ def greedy_categorizer(best_syst, item_seq, D, treeLookup = None):
             elif score == high_score:
                 potential_systs.append(test_syst)
                 best_cat.append(cat.label)
-        best_idx = random.randint(0, len(potential_systs) - 1)
+        best_idx = rng.integers(0, len(potential_systs))
         best_syst = potential_systs[best_idx]
         cat_choices[item] = best_cat[best_idx]
     return best_syst, cat_choices    
@@ -164,7 +166,9 @@ def softmax(x, temp):
     e_x = np.exp(x)
     return e_x / np.sum(e_x, axis=-1, keepdims=True)
 
-def greedy_categorizer_softmax(best_syst, item_seq, D, treeLookup=None, temp=1, alpha=0.0):
+def greedy_categorizer_softmax(best_syst, item_seq, D, treeLookup=None, temp=1, alpha=0.0, rng=None):
+    if rng is None:
+        rng = np.random.default_rng()
     cat_choices = {}
     if treeLookup is None:
         treeLookup = defaultdict(lambda: None)
@@ -186,7 +190,8 @@ def greedy_categorizer_softmax(best_syst, item_seq, D, treeLookup=None, temp=1, 
             cats.append(cat.label)
         prob_dist = softmax(np.array(sys_scores), temp)
         mixture = (1-alpha)*prob_dist + alpha*(1/prob_dist.shape[0])
-        best_idx = np.random.choice([ix for ix in range(len(potential_systs))], p=mixture)
+        best_idx = rng.choice(len(potential_systs), p=mixture)
+        # best_idx = np.random.choice([ix for ix in range(len(potential_systs))], p=mixture)
         best_syst = potential_systs[best_idx]
         best_score = sys_scores[best_idx]
         cat_choices[item] = cats[best_idx]

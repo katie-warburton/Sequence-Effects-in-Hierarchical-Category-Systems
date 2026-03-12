@@ -51,5 +51,27 @@ m0 <- glmer(HAS_X ~ 1 + (1|P_ID)  + (1|STIMULI),
             data = df)
 lrtest(m0, m1)
 round(fixef(m1), 2)
-round(confint(m1, parm='beta_', method='Wald'), 2)
+round(confint(m1, parm='DEPTH2', method='Wald'), 2)
+```
+
+```{r}
+sim_df <- read.csv('../Data/sim_level2_trial_data.csv',  na.strings=c("","NA"))  
+
+sim_df$DEPTH <- relevel(factor(sim_df$DEPTH), ref='3')
+sim_df$HAS_X <- as.numeric(sim_df$NUM_X > 0)
+
+```
+
+```{r}
+m1 <- glm(HAS_X ~ 1 + DEPTH,
+            family = binomial,
+            data = sim_df)
+
+m0 <- glm(HAS_X ~ 1,
+            family = binomial,
+            data = sim_df)
+lrtest(m0, m1)
+
+round(coef(m1)["DEPTH2"], 2)
+round(confint(m1, parm='DEPTH2', method='Wald'), 2)
 ```

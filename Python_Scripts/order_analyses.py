@@ -107,13 +107,15 @@ def get_jsd2(df, loc, order):
     jsd = jsd_no_nan(dist_ord, dist_a)
     return jsd
 
-def perm_test2(df, loc, order, it):
+def perm_test2(df, loc, order, it, seed=18):
     jsd = get_jsd2(df, loc, order)
     seq_df = copy.deepcopy(df)
+    
     seq_df = seq_df[(seq_df['LOC'] == loc) & (seq_df['ORDER'].isin(['a', order]))].reset_index()
     p = 0
+    rng = np.random.default_rng(seed)
     for _ in range(it):
-        seq_df['ORDER'] = seq_df['ORDER'].sample(frac=1, random_state=13).values
+        seq_df['ORDER'] = seq_df['ORDER'].sample(frac=1, random_state=rng).values
         rand_jsd = get_jsd2(seq_df, loc, order)
         if rand_jsd >= jsd:
             p += 1

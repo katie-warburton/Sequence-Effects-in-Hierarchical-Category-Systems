@@ -80,3 +80,30 @@ round(cramerV(cat_by_set), 2)
 
 chisq.test(cat_by_set)$stdre
 ```
+
+```{r}
+sim_df <- read.csv('../Data/sim_level2_trial_data.csv',  na.strings=c("","NA"))  
+
+items <- sprintf("I%02d", 9:23)
+
+sim_df_long <- sim_df %>% pivot_longer(cols=all_of(items), 
+                               values_to = 'CAT') %>% 
+  drop_na() %>% 
+  select(all_of(c('P_ID', 'DEPTH', 'LOC', 'ORDER', 'CAT', 'STIMULI', 'POOL')))
+
+round(table(sim_df_long$CAT) / sum(table(sim_df_long$CAT)), 3)
+```
+
+```{r}
+cat_by_loc <- table(sim_df_long$LOC, sim_df_long$CAT)
+
+cat_by_loc
+
+round(t(apply(cat_by_loc,1, function(x) x/sum(x))), 3)
+
+t <- chisq.test(cat_by_loc)
+t
+round(cramerV(cat_by_loc), 2)
+
+chisq.test(cat_by_loc)$stdre
+```

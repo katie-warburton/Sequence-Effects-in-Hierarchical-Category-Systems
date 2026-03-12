@@ -16,7 +16,8 @@ library(tidyverse)
 library(dplyr) 
 library(ggplot2) 
 library(lmtest) 
-library(parameters) 
+library(lme4)
+# library(parameters) 
 library(mclogit) 
 library("rcompanion")
 
@@ -197,60 +198,78 @@ sprintf('Forward: %s & [%s, %s]', coef[["R~ORDERf"]], ci[6,1], ci[6, 2])
 sprintf('Backward: %s & [%s, %s]', coef[["R~ORDERb"]], ci[4,1], ci[4, 2])
 ```
 
-Using chi-squared for order
+Simulated
 
 ```{r}
-left_cat_by_order <- table(df_L$ORDER, df_L$CAT)
+library(nnet)
 
-left_cat_by_order
-
-round(t(apply(left_cat_by_order,1, function(x) x/sum(x))), 3)
-
-t_pool <- chisq.test(left_cat_by_order)
-t_pool 
-round(cramerV(left_cat_by_order), 2)
-
-chisq.test(left_cat_by_order)$stdre
+sim_df <- read.csv('../Data/sim_level2_trial_data.csv',  na.strings=c("","NA"))  
+items <- sprintf("I%02d", 9:23)
 ```
 
 ```{r}
-center_cat_by_order <- table(df_C$ORDER, df_C$CAT)
+sim_df_1a <- sim_df[sim_df$ORDER != 'a',]
+sim_long_1a <- sim_df_1a %>% pivot_longer(cols=all_of(items), 
+                                  values_to = 'CAT') %>% 
+  drop_na() %>% 
+  select(all_of(c('P_ID', 'DEPTH', 'LOC', 'ORDER', 'CAT', 'STIMULI', 'POOL')))
 
-center_cat_by_order
-
-round(t(apply(center_cat_by_order,1, function(x) x/sum(x))), 3)
-
-t_pool <- chisq.test(center_cat_by_order)
-t_pool 
-round(cramerV(center_cat_by_order), 2)
-
-chisq.test(center_cat_by_order)$stdre
+sim_long_1a$CAT <- relevel(as.factor(sim_long_1a$CAT), ref='X')
+sim_long_1a$ORDER <- relevel(as.factor(sim_long_1a$ORDER), ref='m')
 ```
 
 ```{r}
-right_cat_by_order <- table(df_R$ORDER, df_R$CAT)
+sim_df_L <- sim_long_1a[sim_long_1a$LOC == 'L',]
 
-right_cat_by_order
+lm_1 <- multinom(CAT ~ 1 + ORDER, data = sim_df_L)
 
-round(t(apply(right_cat_by_order,1, function(x) x/sum(x))), 3)
+lm_0 <- multinom(CAT ~ 1, data = sim_df_L)
 
-t_pool <- chisq.test(right_cat_by_order)
-t_pool 
-round(cramerV(right_cat_by_order), 2)
+lrtest(lm_0, lm_1)
 
-chisq.test(right_cat_by_order)$stdre
+
+coef <- round(coef(lm_1), 2)
+ci <- round(confint(lm_1), 2)
+
+print(coef)
+print(ci)
 ```
 
 ```{r}
-cat_by_order <- table(long_1a$ORDER, long_1a$CAT)
+sim_df_C <- sim_long_1a[sim_long_1a$LOC == 'C',]
 
-cat_by_order
+cm_1 <- multinom(CAT ~ 1 + ORDER, data = sim_df_C)
 
-round(t(apply(cat_by_order,1, function(x) x/sum(x))), 3)
+cm_0 <- multinom(CAT ~ 1, data = sim_df_C)
 
-t_pool <- chisq.test(cat_by_order)
-t_pool 
-round(cramerV(cat_by_order), 2)
 
-chisq.test(cat_by_order)$stdre
+
+coef <- round(coef(cm_1), 2)
+ci <- round(confint(cm_1), 2)
+
+print(coef)
+print(ci)
+
+lrtest(cm_0, cm_1)
+
+```
+
+```{r}
+sim_df_R <- sim_long_1a[sim_long_1a$LOC == 'R',]
+
+rm_1 <- multinom(CAT ~ 1 + ORDER, data = sim_df_R)
+
+rm_0 <- multinom(CAT ~ 1, data = sim_df_R)
+
+
+
+coef <- round(coef(rm_1), 2)
+ci <- round(confint(rm_1), 2)
+
+print(coef)
+print(ci)
+
+lrtest(rm_0, rm_1)
+
+
 ```
