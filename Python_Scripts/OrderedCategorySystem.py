@@ -219,8 +219,9 @@ def get_distance_mat(items, min_it=None, max_it=None, noise=0):
 def compute_possible_scores(trials, item_space, folder='Python_Scripts/BaseSystems'):
     D, item_hash = get_distance_mat(item_space)
     lookUpTree = defaultdict(lambda: None)
-    two_level_data = {tr['P_ID']: [] for tr in trials}
-    three_level_data = {tr['P_ID']: [] for tr in trials}
+    # two_level_data = {tr['P_ID']: [] for tr in trials}
+    # three_level_data = {tr['P_ID']: [] for tr in trials}
+    all_data = {tr['P_ID']: [] for tr in trials}
     for tr in trials:
         d = tr['DEPTH']
         cat_assigns = tr['ITEMS']
@@ -251,33 +252,36 @@ def compute_possible_scores(trials, item_space, folder='Python_Scripts/BaseSyste
             choice_idx = cats.index(cat_choice)
             syst = potential_systs[choice_idx]  
             trial_data.append((syst_scores, choice_idx))
-        if d == 2:
-            two_level_data[tr['P_ID']].append(trial_data)
-        else:
-            three_level_data[tr['P_ID']].append(trial_data)
-    return two_level_data, three_level_data
+        # if d == 2:
+        #     two_level_data[tr['P_ID']].append(trial_data)
+        # else:
+        #     three_level_data[tr['P_ID']].append(trial_data)
+        all_data[tr['P_ID']].append((d, trial_data))
+    return all_data
+    # return two_level_data, three_level_data
 
 
-def convert_indices(probs, indices, K=7):
-    new_probs = np.zeros((probs.shape[0],1))
-    left = np.where(indices < 3)[0]
-    new_probs[left,:] = np.sum(probs[left,:3], axis=1, keepdims=True)
-    right = np.where(indices > 3)[0]
-    new_probs[right,:] = np.sum(probs[right,4:], axis=1, keepdims=True)
+# def convert_indices(probs, indices, K=7):
+#     new_probs = np.zeros((probs.shape[0],1))
+#     left = np.where(indices < 3)[0]
+#     new_probs[left,:] = np.sum(probs[left,:3], axis=1, keepdims=True)
+#     right = np.where(indices > 3)[0]
+#     new_probs[right,:] = np.sum(probs[right,4:], axis=1, keepdims=True)
 
-    middle = np.where(indices == 3)[0]
-    new_probs[middle,:] = probs[middle,3:4]
-    new_probs = new_probs.reshape(-1)
+#     middle = np.where(indices == 3)[0]
+#     new_probs[middle,:] = probs[middle,3:4]
+#     new_probs = new_probs.reshape(-1)
 
-    random_baseline = np.zeros(new_probs.shape) 
-    random_baseline[left] = (1.0 / K)*3
-    random_baseline[right] = (1.0 / K)*3
-    random_baseline[middle] = (1.0 / K)
-    return new_probs, random_baseline
+#     random_baseline = np.zeros(new_probs.shape) 
+#     random_baseline[left] = (1.0 / K)*3
+#     random_baseline[right] = (1.0 / K)*3
+#     random_baseline[middle] = (1.0 / K)
+#     return new_probs, random_baseline
 
 def get_participant_loglike(data, determ=False, temp=1.0, alpha=0.0):
     total_log_like = 0.0
-    for trial in data:
+    for trial_dat in data:
+        depth, trial = trial_dat
         sys_scores_array = np.array([s for s, _ in trial], dtype=np.float64)
         choice_indices = np.array([c for _, c in trial], dtype=int)
         if determ:
@@ -304,13 +308,21 @@ def get_total_log_like(participants, determ=False, temp=1.0, alpha=0.0):
     return total_log_like
 
 
-def get_loglike_and_n(participants, determ=False, temp=1.0, alpha=0.0):
-    total_log_like = 0.0
-    n_trials = 0
+def get_test_log_likes(participants, determ=False, temp=1.0, alpha=0.0):
+    two_log_like, three_log_like = 0.0, 0.0
     for data in participants.values():
-        total_log_like += get_participant_loglike(data, determ, temp, alpha)
-        n_trials += len(data)
-    return total_log_like, n_trials
+        two_data, three_data = data
+        two_log_like += get_participant_loglike(two_data, determ, temp, alpha)
+        three_log_like += get_participant_loglike(three_data, determ, temp, alpha)
+    return  two_log_like, three_log_like 
+
+# def get_loglike_and_n(participants, determ=False, temp=1.0, alpha=0.0):
+#     total_log_like = 0.0
+#     n_trials = 0
+#     for data in participants.values():
+#         total_log_like += get_participant_loglike(data, determ, temp, alpha)
+#         n_trials += len(data)
+#     return total_log_like, n_trials
 
 def find_best_params(data, params, determ=False):
     best_ll = -np.inf

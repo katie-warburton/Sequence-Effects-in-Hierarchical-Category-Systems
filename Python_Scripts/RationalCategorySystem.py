@@ -249,7 +249,7 @@ def format_rcm_data(trial_data):
     for t in trial_data:
         item_assignments = {int(key[1:]): val for key, val in t['ITEMS'].items()}
         sequence = {key: int(val) for key, val in t['SEQUENCE'].items()}
-        rcmData[t['P_ID']].append({'CHOICES': item_assignments, 'SEQUENCE': sequence, 'LOC': t['LOC'], 'ORDER': t['ORDER'], 'STIMULI': t['STIMULI']})
+        rcmData[t['P_ID']].append({'CHOICES': item_assignments, 'SEQUENCE': sequence, 'LOC': t['LOC'], 'ORDER': t['ORDER'], 'STIMULI': t['STIMULI'], 'DEPTH':t['DEPTH']})
     return rcmData
 
 def find_best_params(data, item_space, depth, params, determ=False):

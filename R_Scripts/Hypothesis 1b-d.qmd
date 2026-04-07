@@ -19,7 +19,6 @@ library(ggplot2)
 library(lmtest) 
 library(brms) 
 library(tidybayes) 
-# library(parameters) 
 
 set.seed(13)
 ```
@@ -33,12 +32,21 @@ items <- sprintf("I%02d", 9:23)
 df <- df[df$ORDER != 'a',] %>% 
   pivot_longer(cols=all_of(items), names_to = NULL, values_to = 'CAT')
 df <- drop_na(df)
+
+
+df_sim <- read.csv('../Data/sim_level2_trial_data.csv',  na.strings=c("","NA"))  
+
+df_sim <- df_sim[df_sim$ORDER != 'a',] %>% 
+  pivot_longer(cols=all_of(items), names_to = NULL, values_to = 'CAT')
+df_sim <- drop_na(df_sim)
+df_sim <- rename(df_sim, TRIAL = P_ID)
 ```
 
 ## Hypothesis 1b
 
 ```{r}
 df_C <- df[df$LOC == 'C',]
+sim_df_C <- df_sim[df_sim$LOC == 'C',]
 ```
 
 Items in the centered location are more likely to be assigned to category:
@@ -63,6 +71,25 @@ mbi_0 <- glmer(IS_A ~ 1 + (1|STIMULI) + (1|P_ID),
 lrtest(mbi_0, mbi_1)
 round(fixef(mbi_1), 2)
 round(confint(mbi_1, parm='beta_', method='Wald'), 2)
+print('Random Effects')
+VarCorr(mbi_1)
+VarCorr(mbi_0)
+```
+
+```{r}
+sim_df_1bi <- sim_df_C[sim_df_C$ORDER != 'm',]
+sim_df_1bi$IS_A <- as.integer(sim_df_1bi$CAT == 'L')
+
+simmbi_1 <- glm(IS_A ~ 1 + ORDER,
+              family = binomial,
+              data = sim_df_1bi)
+
+simmbi_0 <- glm(IS_A ~ 1,
+                   data = sim_df_1bi,
+                   family = binomial)
+lrtest(simmbi_0, simmbi_1)
+round(coef(simmbi_1), 2)
+round(confint(simmbi_1, method='Wald'), 2)
 ```
 
 \(ii\) B in the backwards order than in the forwards order
@@ -88,6 +115,29 @@ mbii_0 <- glmer(IS_B ~ 1 + (1|STIMULI) + (1|P_ID),
 lrtest(mbii_0, mbii_1)
 round(fixef(mbii_1), 2)
 round(confint(mbii_1, parm='beta_', method='Wald'), 2)
+print('Random Effects')
+VarCorr(mbii_1)
+VarCorr(mbii_0)
+```
+
+```{r}
+sim_df_bii <- sim_df_C[sim_df_C$ORDER != 'm',]
+sim_df_bii$IS_B <- as.integer(sim_df_bii$CAT == 'R')
+sim_df_bii$ORDER <- relevel(factor(sim_df_bii$ORDER), ref = 'f')
+
+
+simmbii_1 <- glm(IS_B ~ 1 + ORDER,
+              family = binomial,
+              data = sim_df_bii)
+
+simmbii_0 <- glm(IS_B ~ 1,
+                  data = sim_df_bii,
+                  family = binomial)
+        
+
+lrtest(simmbii_0, simmbii_1)
+round(coef(simmbii_1), 2)
+round(confint(simmbii_1, method='Wald'), 2)
 ```
 
 \(iii\) X in the middle order than in the forwards or backwards orders
@@ -113,6 +163,32 @@ mbiii_0 <- glmer(IS_X ~ 1 + (1|STIMULI) + (1|P_ID),
 lrtest(mbiii_0, mbiii_1)
 round(fixef(mbiii_1), 2)
 round(confint(mbiii_1, parm='beta_', method='Wald'), 2)
+
+print('Random Effects')
+VarCorr(mbiii_1)
+VarCorr(mbiii_0)
+```
+
+```{r}
+sim_df_biii <- sim_df_C
+sim_df_biii$IS_X <- as.integer(sim_df_biii$CAT == 'X')
+sim_df_biii$ORDER[sim_df_biii$ORDER != 'm'] <- 'not_m'
+sim_df_biii$ORDER <- relevel(factor(sim_df_biii$ORDER), ref = 'not_m')
+
+
+simmbiii_1 <- glm( IS_X ~ 1 + ORDER,
+              family = binomial,
+              data = sim_df_biii)
+
+
+simmbiii_0 <- glm(IS_X ~ 1,
+                   data = sim_df_biii,
+                   family = binomial)
+
+lrtest(simmbiii_0, simmbiii_1)
+round(coef(simmbiii_1), 2)
+round(confint(simmbiii_1, method='Wald'), 2)
+
 ```
 
 ## Hypothesis 1c
@@ -138,6 +214,28 @@ m1c_0 <- glmer(IS_A ~ 1 + (1|STIMULI) + (1|P_ID),
 lrtest(m1c_0, m1c_1)
 fixef(m1c_1)
 round(confint(m1c_1, parm='beta_', method='Wald'), 2)
+
+print('Random Effects')
+VarCorr(m1c_1)
+VarCorr(m1c_0)
+```
+
+```{r}
+sim_df_L <- df_sim[df_sim$LOC == 'L',]
+sim_df_1c <- sim_df_L[sim_df_L$ORDER != 'm',]
+sim_df_1c$IS_A <- as.integer(sim_df_1c$CAT == 'L')
+
+simm1c_1 <- glm(IS_A ~ 1 + ORDER,
+              family = binomial,
+              data = df_1c)
+
+simm1c_0 <- glm(IS_A ~ 1,
+                   data = df_1c,
+                   family = binomial)
+
+lrtest(simm1c_0, simm1c_1)
+coef(simm1c_1)
+round(confint(simm1c_1,  method='Wald'), 2)
 ```
 
 ## Hypothesis 1d
@@ -164,4 +262,27 @@ m1d_0 <- glmer(IS_B ~ 1 + (1|STIMULI) + (1|P_ID),
 lrtest(m1d_0, m1d_1)
 fixef(m1d_1)
 round(confint(m1d_1, parm='beta_', method='Wald'), 2)
+
+print('Random Effects')
+VarCorr(m1d_1)
+VarCorr(m1d_0)
+```
+
+```{r}
+sim_df_R <- df_sim[df_sim$LOC == 'R',]
+sim_df_1d <- sim_df_R[sim_df_R$ORDER != 'm',]
+sim_df_1d$IS_B <- as.integer(sim_df_1d$CAT == 'R')
+sim_df_1d$ORDER <- relevel(factor(sim_df_1d$ORDER), ref='f')
+
+simm1d_1 <- glm(IS_B ~ 1 + ORDER,
+              family = binomial,
+              data = df_1d)
+
+simm1d_0 <- glm(IS_B ~ 1,
+                   data = df_1d,
+                   family = binomial)
+
+lrtest(simm1d_0, simm1d_1)
+coef(simm1d_1)
+round(confint(simm1d_1, method='Wald'), 2)
 ```

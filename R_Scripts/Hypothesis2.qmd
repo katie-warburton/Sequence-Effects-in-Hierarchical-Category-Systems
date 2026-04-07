@@ -58,3 +58,33 @@ prob <- exp(intercept) / (1 + exp(intercept))
 
 print(prob)
 ```
+
+Simulated
+
+```{r}
+sim_df <- read.csv('../Data/sim_hyp2_df_long.csv',  na.strings=c("","NA"))  
+```
+
+```{r}
+m1 <- glmer(SAME ~ 1 + (1|P_ID),
+            family = binomial,
+            data = sim_df,
+            control = glmerControl(optimizer = "bobyqa"))
+
+m0 <- glmer(SAME ~ 0 + (1|P_ID),
+            family = binomial,
+            data = sim_df,
+            control = glmerControl(optimizer = "bobyqa"))
+
+lrtest(m0, m1)
+round(fixef(m1), 2)
+
+round(confint(m1, parm='(Intercept)', method='Wald'), 2)
+
+intercept <- coef(summary(m1))[1]
+prob <- exp(intercept) / (1 + exp(intercept))
+
+print(prob)
+
+print(m1)
+```

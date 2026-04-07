@@ -46,9 +46,6 @@ long_1a <- df_1a %>% pivot_longer(cols=all_of(items),
 long_1a$CAT <- relevel(as.factor(long_1a$CAT), ref='X')
 long_1a$ORDER <- relevel(as.factor(long_1a$ORDER), ref='m')
 
-
-                
-
 ```
 
 ### Left
@@ -59,13 +56,13 @@ df_L <- long_1a[long_1a$LOC == 'L',]
 lm_1 <- mblogit(
    formula = CAT ~ 1 + ORDER,
    random = list(~1|STIMULI, ~1|P_ID),
-    control = mmclogit.control(inner.optimizer = 'CG' ),
+    control = mmclogit.control(inner.optimizer = 'Nelder-Mead' ),
    data = df_L)
 
 lm_0 <- mblogit(
    formula = CAT ~ 1,
    random = list( ~1|STIMULI, ~1|P_ID),
-    control = mmclogit.control(inner.optimizer = 'CG' ),
+    control = mmclogit.control(inner.optimizer = 'Nelder-Mead' ),
    data = df_L)
 
 l_anova <- anova(lm_0, lm_1, test='Chisq')
@@ -96,13 +93,13 @@ df_C <- long_1a[long_1a$LOC == 'C',]
 cm_1 <- mblogit(
    formula = CAT ~ 1 + ORDER,
    random = list(~1|STIMULI, ~1|P_ID),
-   control = mmclogit.control(inner.optimizer = 'CG' ),
+   control = mmclogit.control(inner.optimizer = 'BFGS'),
    data = df_C)
 
 cm_0 <- mblogit(
    formula = CAT ~ 1,
    random = list(~1|STIMULI, ~1|P_ID),
-   control = mmclogit.control(inner.optimizer = 'CG' ),
+   control = mmclogit.control(inner.optimizer = 'BFGS' ),
    data = df_C)
 
 c_anova <- anova(cm_0, cm_1, test='Chisq')
@@ -132,18 +129,22 @@ df_R <- long_1a[long_1a$LOC == 'R',]
 
 rm_1 <- mblogit(
    formula = CAT ~ 1 + ORDER,
-   random = list(~1|STIMULI, ~1|P_ID),
-   control = mmclogit.control(inner.optimizer = "CG"),
+   random = list(~1|P_ID),
+   control = mmclogit.control(inner.optimizer = "BFGS"),
    data = df_R)
 
 rm_0 <- mblogit(
    formula = CAT ~ 1,
-   random = list(~1|STIMULI, ~1|P_ID),
-    control = mmclogit.control(inner.optimizer = "CG"),
+   random = list(~1|P_ID),
+    control = mmclogit.control(inner.optimizer = "BFGS"),
    data = df_R)
 
 r_anova <- anova(rm_0, rm_1, test = "Chisq")
 r_anova
+```
+
+```{r}
+rm_1
 ```
 
 ```{r}
@@ -168,13 +169,13 @@ sprintf('%s & [%s, %s]', coef[["R~ORDERb"]], ci[4,1], ci[4, 2])
 m_1 <- mblogit(
    formula = CAT ~ 1 + ORDER,
    random = list(~1|STIMULI, ~1|P_ID, ~1|LOC), 
-   control = mmclogit.control(inner.optimizer = "CG"),
+   control = mmclogit.control(inner.optimizer = "BFGS"),
    data = long_1a)
 
 m_0 <- mblogit(
    formula = CAT ~ 1,
    random = list(~1|STIMULI, ~1|P_ID, ~1|LOC), 
-   control = mmclogit.control(inner.optimizer = "CG"),
+   control = mmclogit.control(inner.optimizer = "BFGS"),
    data = long_1a)
 
 o_anova <- anova(m_0, m_1, test = "Chisq")
@@ -198,11 +199,9 @@ sprintf('Forward: %s & [%s, %s]', coef[["R~ORDERf"]], ci[6,1], ci[6, 2])
 sprintf('Backward: %s & [%s, %s]', coef[["R~ORDERb"]], ci[4,1], ci[4, 2])
 ```
 
-Simulated
+## Simulated
 
 ```{r}
-library(nnet)
-
 sim_df <- read.csv('../Data/sim_level2_trial_data.csv',  na.strings=c("","NA"))  
 items <- sprintf("I%02d", 9:23)
 ```
@@ -216,60 +215,150 @@ sim_long_1a <- sim_df_1a %>% pivot_longer(cols=all_of(items),
 
 sim_long_1a$CAT <- relevel(as.factor(sim_long_1a$CAT), ref='X')
 sim_long_1a$ORDER <- relevel(as.factor(sim_long_1a$ORDER), ref='m')
+
+sim_long_1a <- rename(sim_long_1a, TRIAL = P_ID)
 ```
+
+#### Left
 
 ```{r}
 sim_df_L <- sim_long_1a[sim_long_1a$LOC == 'L',]
 
-lm_1 <- multinom(CAT ~ 1 + ORDER, data = sim_df_L)
+lm_1 <- mblogit(
+   formula = CAT ~ 1 + ORDER,
+   random = list(~1|TRIAL),
+   control = mmclogit.control(inner.optimizer = 'BFGS' ),
+   data = sim_df_L)
 
-lm_0 <- multinom(CAT ~ 1, data = sim_df_L)
 
-lrtest(lm_0, lm_1)
+lm_0 <- mblogit(
+   formula = CAT ~ 1,
+   random = list(~1|TRIAL),
+   control = mmclogit.control(inner.optimizer = 'BFGS' ),
+   data = sim_df_L)
 
+anova(lm_0, lm_1, test = "Chisq")
+```
 
-coef <- round(coef(lm_1), 2)
+```{r}
+coefs <- round(coef(lm_1), 2)
 ci <- round(confint(lm_1), 2)
 
-print(coef)
-print(ci)
+sprintf('%s & [%s, %s]', coefs[["L~(Intercept)"]], ci[1,1], ci[1, 2])
+
+sprintf('%s & [%s, %s]', coefs[["L~ORDERf"]], ci[5,1], ci[5, 2])
+sprintf('%s & [%s, %s]', coefs[["L~ORDERb"]], ci[3,1], ci[3, 2])
+
+
+sprintf('%s & [%s, %s]', coefs[["R~(Intercept)"]], ci[2,1], ci[2, 2])
+
+sprintf('%s & [%s, %s]', coefs[["R~ORDERf"]], ci[6,1], ci[6, 2])
+sprintf('%s & [%s, %s]', coefs[["R~ORDERb"]], ci[4,1], ci[4, 2])
 ```
 
 ```{r}
 sim_df_C <- sim_long_1a[sim_long_1a$LOC == 'C',]
 
-cm_1 <- multinom(CAT ~ 1 + ORDER, data = sim_df_C)
+cm_1 <- mblogit(
+   formula = CAT ~ 1 + ORDER,
+   random = list(~1|TRIAL),
+   control = mmclogit.control(inner.optimizer = 'BFGS' ),
+   data = sim_df_C)
 
-cm_0 <- multinom(CAT ~ 1, data = sim_df_C)
 
+cm_0 <- mblogit(
+   formula = CAT ~ 1,
+   random = list(~1|TRIAL),
+   control = mmclogit.control(inner.optimizer = 'BFGS' ),
+   data = sim_df_C)
 
+```
 
-coef <- round(coef(cm_1), 2)
+```{r}
+coefs <- round(coef(cm_1), 2)
 ci <- round(confint(cm_1), 2)
 
-print(coef)
-print(ci)
+sprintf('%s & [%s, %s]', coefs[["L~(Intercept)"]], ci[1,1], ci[1, 2])
 
-lrtest(cm_0, cm_1)
+sprintf('%s & [%s, %s]', coefs[["L~ORDERf"]], ci[5,1], ci[5, 2])
+sprintf('%s & [%s, %s]', coefs[["L~ORDERb"]], ci[3,1], ci[3, 2])
 
+
+sprintf('%s & [%s, %s]', coefs[["R~(Intercept)"]], ci[2,1], ci[2, 2])
+
+sprintf('%s & [%s, %s]', coefs[["R~ORDERf"]], ci[6,1], ci[6, 2])
+sprintf('%s & [%s, %s]', coefs[["R~ORDERb"]], ci[4,1], ci[4, 2])
 ```
 
 ```{r}
 sim_df_R <- sim_long_1a[sim_long_1a$LOC == 'R',]
 
-rm_1 <- multinom(CAT ~ 1 + ORDER, data = sim_df_R)
+rm_1 <- mblogit(
+   formula = CAT ~ 1 + ORDER,
+   random = list(~1|TRIAL),
+   control = mmclogit.control(inner.optimizer = 'BFGS' ),
+   data = sim_df_R)
 
-rm_0 <- multinom(CAT ~ 1, data = sim_df_R)
+rm_0 <- mblogit(
+   formula = CAT ~ 1,
+   random = list(~1|TRIAL),
+   control = mmclogit.control(inner.optimizer = 'BFGS' ),
+   data = sim_df_R)
 
 
+anova(rm_0, rm_1, test = "Chisq")
+```
 
-coef <- round(coef(rm_1), 2)
+```{r}
+coefs <- round(coef(rm_1), 2)
 ci <- round(confint(rm_1), 2)
 
-print(coef)
-print(ci)
+sprintf('%s & [%s, %s]', coefs[["L~(Intercept)"]], ci[1,1], ci[1, 2])
 
-lrtest(rm_0, rm_1)
+sprintf('%s & [%s, %s]', coefs[["L~ORDERf"]], ci[5,1], ci[5, 2])
+sprintf('%s & [%s, %s]', coefs[["L~ORDERb"]], ci[3,1], ci[3, 2])
 
 
+sprintf('%s & [%s, %s]', coefs[["R~(Intercept)"]], ci[2,1], ci[2, 2])
+
+sprintf('%s & [%s, %s]', coefs[["R~ORDERf"]], ci[6,1], ci[6, 2])
+sprintf('%s & [%s, %s]', coefs[["R~ORDERb"]], ci[4,1], ci[4, 2])
+```
+
+```{r}
+m_1 <- mblogit(
+   formula = CAT ~ 1 + ORDER + LOC,
+   random = list(~1|TRIAL), 
+   control = mmclogit.control(inner.optimizer = "Nelder-Mead"),
+   data = sim_long_1a)
+
+m_0 <- mblogit(
+   formula = CAT ~ 1 + LOC,
+   random = list(~1|TRIAL), 
+   control = mmclogit.control(inner.optimizer = "Nelder-Mead"),
+   data = sim_long_1a)
+
+o_anova <- anova(m_0, m_1, test = "Chisq")
+o_anova
+```
+
+```{r}
+m_1
+```
+
+```{r}
+coef <- round(coef(m_1), 2)
+ci <- round(confint(m_1), 2)
+
+print('L vs. X')
+sprintf('Intercept: %s & [%s, %s]', coef[["L~(Intercept)"]], ci[1,1], ci[1, 2])
+sprintf('Forward: %s & [%s, %s]', coef[["L~ORDERf"]], ci[5,1], ci[5, 2])
+sprintf('Backward: %s & [%s, %s]', coef[["L~ORDERb"]], ci[3,1], ci[3, 2])
+
+
+print('R vs. X')
+sprintf('Intercept: %s & [%s, %s]', coef[["R~(Intercept)"]], ci[2,1], ci[2, 2])
+
+sprintf('Forward: %s & [%s, %s]', coef[["R~ORDERf"]], ci[6,1], ci[6, 2])
+sprintf('Backward: %s & [%s, %s]', coef[["R~ORDERb"]], ci[4,1], ci[4, 2])
 ```
