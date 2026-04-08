@@ -7,6 +7,7 @@ import copy
 import random
 import numpy as np
 from collections import defaultdict
+
 class Category:
     def __init__(self, label, depth=0, parent=None):
         self.label = label
