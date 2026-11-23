@@ -1,10 +1,11 @@
-
 .Rhistory
 Figures/
 Tables/
-Data/results-98863bd139ec98cf6bc52549beaaf679*
 Python_Scripts/__pycache__
+Python_Scripts/data_cleaner.py
+Data/results-98863bd139ec98cf6bc52549beaaf679*
 Simulations/
 .venv/
 *.html
 *_files
+*.rds
