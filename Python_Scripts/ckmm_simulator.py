@@ -1,25 +1,15 @@
-import random
 import argparse
 import numpy as np
 import pandas as pd
 from collections import defaultdict
 import OrderedCategorySystem as OCS
 
-ITEMS = ['I09', 'I10', 'I11', 'I12', 'I13', 'I14', 'I15', 'I16', 'I17', 'I18', 'I19', 'I20', 'I21', 'I22', 'I23']
+NOVEL_ITEMS = ['I09', 'I10', 'I11', 'I12', 'I13', 'I14', 'I15', 'I16', 'I17', 'I18', 'I19', 'I20', 'I21', 'I22', 'I23']
 
-LEFT = ITEMS[:9]
-CENTRE = ITEMS[3:12]
-RIGHT = ITEMS[6:]
-
-LOCS = [('L', LEFT),
-        ('C', CENTRE), 
-        ('R', RIGHT)]
-ORDERS = [('f', 0, [1, 1, 3, 4, 5, 6, 7, 8]),
-          ('m', 4, [0, 1, 1, 3, 5, 6, 7, 8]),
-          ('b', 8, [0, 1, 1, 3, 4, 5, 6, 7])]
-
-item_space = [i for i in range(1, 32)]
-
+'''
+Generate the sequence of items used in a single simulated trial based on its location (loc) and order condition. 
+return the set as a list of item numbers. 
+'''
 def get_item_set(order, loc, rng=None):
     shift = 3
     distractors = [1, 3, 29, 31]
@@ -30,7 +20,8 @@ def get_item_set(order, loc, rng=None):
             items =  [12, 13, 15, 14, 16, 18, 17, 19, 20]
         elif order == 'B':
             items = [20, 19, 17, 18, 16, 14, 15, 13, 12]
-        else: 
+        else:
+            # Like participants, the model randomly sees one of the two possible middle orders. 
             M1 =  [16, 17, 15, 18, 14, 19, 13, 20, 12]
             M2 = [16, 15, 17, 14, 18, 13, 19, 12, 20]
             items = [M1, M2][rng.integers(2)]
@@ -48,33 +39,38 @@ def get_item_set(order, loc, rng=None):
         elif loc == 'R':
             items = [i+shift for i in items]
         final_set = items + distractors
+        # we simulate the all-at-once condition by randomizing stimulus order. 
         idx = rng.permutation(len(final_set))
         final_set = [final_set[i] for i in idx]
         return final_set
 
-def simulate_trials(conditions, softmax, temps=(1, 1), alphas=(0, 0), seed=18):
+'''
+Simulate the experiment using ordered CKMM. 
+Softmax controls whether the deterministic or softmax variant of ordered CKMM are run,
+temp and alpha reflect model parameters, and seed sets the random state for replicability. 
+A pandas dataframe equivalentally formatted to the participant data is returned. 
+'''
+def simulate_trials(conditions, softmax, temp=1.0, alpha=0, seed=1999):
     item_space = [i for i in range(1, 32)]
     D, item_hash = OCS.get_distance_mat(item_space)
-    treeCache = defaultdict(lambda: None)
     ss = np.random.SeedSequence(seed)
     child_seeds = ss.spawn(len(conditions))
     trials = []
     for i in range(len(conditions)):
+        treeCache = defaultdict(lambda: None)
         rng = np.random.default_rng(child_seeds[i])
         code = conditions[i]
-        d, l, o = list(code)
+        d, l, o = list(code) # depth, loc, order 
         items = get_item_set(o, l, rng=rng)
         if d == '2':
             syst = OCS.CategorySystem(item_hash, 'Python_Scripts/BaseSystems/tree2D.json')
         else:
             syst = OCS.CategorySystem(item_hash, 'Python_Scripts/BaseSystems/tree3D.json')
         if softmax:
-            if d == '2':
-                score, cat_choices = OCS.greedy_categorizer_softmax(syst, items, D, treeCache, temps[0], alphas[0], rng=rng)
-            else:
-                score, cat_choices = OCS.greedy_categorizer_softmax(syst, items, D, treeCache, temps[1], alphas[1], rng=rng)
-        else:
+            score, cat_choices = OCS.greedy_categorizer_softmax(syst, items, D, treeCache, temp, alpha, rng=rng)
+        else: # if deterministic
             score, cat_choices = OCS.greedy_categorizer(syst, items, D, treeCache)
+        # store trial level data in an equivalent format to the participant data
         cat_choices['SCORE'] = score
         cat_choices['DEPTH'] = int(d)
         cat_choices['LOC'] = l
@@ -83,7 +79,7 @@ def simulate_trials(conditions, softmax, temps=(1, 1), alphas=(0, 0), seed=18):
         cat_choices['POOL'] = 'simulated'
         cat_choices['STIMULI'] = 'simulated'
         trials.append(cat_choices)
-        if i % 1000 == 0:
+        if i % 200 == 0:
             print(f'{i+1} iteration(s) completed')
     df = pd.DataFrame.from_dict(trials)
     df = df[['P_ID', 'DEPTH', 'LOC', 'ORDER'] + [i for i in range(9, 24)] + [1, 3, 29, 31] + ['STIMULI', 'POOL', 'SCORE']]
@@ -91,36 +87,27 @@ def simulate_trials(conditions, softmax, temps=(1, 1), alphas=(0, 0), seed=18):
     df.rename(columns={1: 'I01', 3: 'I03', 29: 'I29', 31: 'I31'}, inplace=True)
     return df
 
-def get_trial_codes(fp):
-    allParticipants = pd.read_csv(fp)
+def run_simulation(softmax, temp, alpha, seed=1999):
+    # get participant_list
+    allParticipants = pd.read_csv('Data/participant_data.csv')
     allParticipants =  allParticipants[(allParticipants['ATTEMPTS'] < 3) & (allParticipants['TOTAL_ERRORS'] < 4)]
     participants = allParticipants['P_ID'].tolist()
 
+    # get participant trial codes so the number of each trial type is equivalent between simulated and participant data
     trials_df = pd.read_csv('Data/trial_data.csv')    
     trials_df = trials_df[trials_df['P_ID'].isin(participants)][['DEPTH', 'LOC', 'ORDER']]
+    codes = trials_df["DEPTH"].astype(str) + trials_df["LOC"] + trials_df['ORDER'].str.upper()
+    codes = codes.tolist()
 
-    codes = trials_df["DEPTH"].astype(str) + trials_df["LOC"] + trials_df['ORDER'].str.upper() + '_' + trials_df.index.astype(str)
-    return codes.tolist()
+    # simulate the full experiment 
+    df_sm_full = simulate_trials(codes, softmax, temp=temp, alpha=alpha, seed=seed)
+    df_sm_full.to_csv('Data/sim_trial_data.csv', index=None)
 
-def simulate(sims, codes, temps, alphas):
-    master_seed = 99
-    rng = np.random.default_rng(master_seed)
-    seeds = rng.integers(0, 2**31, size=sims).tolist()
-    p_ids = {f's{int(c.split('_')[1]):03d}': {'HAS_X': [], 'SAME_AS_FIRST': []} for c in codes}
-    for i, seed in enumerate(seeds):
-        print(seed)        
-        random.shuffle(codes)
-        simulate_trials(codes, temps, alphas, seed=seed)
-
-
-# if __name__ == '__main__':
-#     parser = argparse.ArgumentParser(description="Simulate categorization with CKMM")
-#     parser.add_argument('n', type=int, help='The number of simulations to run.')
-#     parser.add_argument('--temps', type=tuple, default=(4.0, 1.0), help='Temperature for 2-level and 3-level conditions. Default: (4.0, 1.0).')
-#     parser.add_argument('--alpha', type=tuple, default=(0.05, 0.14), help='Second and third level mixture parameter. Default: (0.05, 0.14).')
-#     args = parser.parse_args()
-#     codes = get_trial_codes('../Data/trial_data.csv')
-    # data = simulate(args.n, codes, args.temps, args.alphas)
-
-codes = get_trial_codes('Data/participant_data.csv')
-simulate(1, codes, (4.0, 1.0), (0.05, 0.14))
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Simulate categorization with CKMM. Default parameters will replicate the data used in the paper.")
+    parser.add_argument('softmax', type=bool, help='Whether to run ordered CKMM as a greedy deterministic model or stochastically with a softmax layer.')
+    parser.add_argument('--temp', type=float, default= 1.0, help='Temperature parameter. Default: 1.0.')
+    parser.add_argument('--alpha', type=float, default=0.15, help='Mixture parameter. Default: 0.15.')
+    parser.add_argument('--seed', type=int, default=1999, help="Random seed. Default: 1999")
+    args = parser.parse_args()
+    run_simulation(args.softmax, args.temp, args.alpha, args.seed)
