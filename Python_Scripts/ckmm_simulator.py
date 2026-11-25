@@ -50,7 +50,7 @@ Softmax controls whether the deterministic or softmax variant of ordered CKMM ar
 temp and alpha reflect model parameters, and seed sets the random state for replicability. 
 A pandas dataframe equivalentally formatted to the participant data is returned. 
 '''
-def simulate_trials(conditions, softmax, temp=1.0, alpha=0, seed=1999):
+def simulate_trials(conditions, softmax, temp=1.0, alpha=0, seed=1998):
     item_space = [i for i in range(1, 32)]
     D, item_hash = OCS.get_distance_mat(item_space)
     ss = np.random.SeedSequence(seed)
@@ -87,7 +87,7 @@ def simulate_trials(conditions, softmax, temp=1.0, alpha=0, seed=1999):
     df.rename(columns={1: 'I01', 3: 'I03', 29: 'I29', 31: 'I31'}, inplace=True)
     return df
 
-def run_simulation(softmax, temp, alpha, seed=1999):
+def run_simulation(softmax, temp, alpha, seed=1998):
     # get participant_list
     allParticipants = pd.read_csv('Data/participant_data.csv')
     allParticipants =  allParticipants[(allParticipants['ATTEMPTS'] < 3) & (allParticipants['TOTAL_ERRORS'] < 4)]
@@ -101,13 +101,13 @@ def run_simulation(softmax, temp, alpha, seed=1999):
 
     # simulate the full experiment 
     df_sm_full = simulate_trials(codes, softmax, temp=temp, alpha=alpha, seed=seed)
-    df_sm_full.to_csv('Data/sim_trial_data.csv', index=None)
+    df_sm_full.to_csv('Data/simulated_trial_data.csv', index=None)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Simulate categorization with CKMM. Default parameters will replicate the data used in the paper.")
     parser.add_argument('softmax', type=bool, help='Whether to run ordered CKMM as a greedy deterministic model or stochastically with a softmax layer.')
     parser.add_argument('--temp', type=float, default= 1.0, help='Temperature parameter. Default: 1.0.')
     parser.add_argument('--alpha', type=float, default=0.15, help='Mixture parameter. Default: 0.15.')
-    parser.add_argument('--seed', type=int, default=1999, help="Random seed. Default: 1999")
+    parser.add_argument('--seed', type=int, default=1998, help="Random seed. Default: 1999")
     args = parser.parse_args()
     run_simulation(args.softmax, args.temp, args.alpha, args.seed)
